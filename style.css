@@ -34,6 +34,13 @@ html, body {
   --transition-page: 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ---------- Dark mode variables ---------- */
+[data-theme="dark"] {
+  --base-bg: #0F0F0F;
+  --text-main: #E8E8E8;
+  --text-secondary: #9A9A9A;
+}
+
 /* ---------- Page system ---------- */
 .page {
   position: fixed;
@@ -101,6 +108,10 @@ html, body {
   display: none;
 }
 
+[data-theme="dark"] #page-cover {
+  background: linear-gradient(175deg, #1A1A1A 0%, #111 100%);
+}
+
 #page-cover[data-active="true"] { display: block; }
 
 /* 2.1 Asymmetric grid */
@@ -123,6 +134,8 @@ html, body {
   padding-right: 0.75rem;
   border-right: 1px solid rgba(0,0,0,0.08);
 }
+
+[data-theme="dark"] .cover-brand { border-color: rgba(255,255,255,0.08); }
 
 .brand-lockup {
   display: flex;
@@ -150,6 +163,8 @@ html, body {
   will-change: transform, opacity;
 }
 
+[data-theme="dark"] .brand-letter { color: #E8E8E8; }
+
 /* Thin rule between SEASON and ME */
 .brand-rule {
   width: 100%;
@@ -161,6 +176,8 @@ html, body {
   transform-origin: left;
   will-change: transform, opacity;
 }
+
+[data-theme="dark"] .brand-rule { background: rgba(255,255,255,0.18); }
 
 /* "ME" — display size */
 .brand-word-me {
@@ -176,6 +193,8 @@ html, body {
   will-change: transform, opacity;
 }
 
+[data-theme="dark"] .brand-word-me { color: #E8E8E8; }
+
 /* "· see myself ·" tagline below */
 .brand-tagline-sub {
   font-family: 'Playfair Display', Georgia, serif;
@@ -187,6 +206,8 @@ html, body {
   opacity: 0;
   will-change: opacity;
 }
+
+[data-theme="dark"] .brand-tagline-sub { color: #6A6A6A; }
 
 .cover-meta {
   grid-area: meta;
@@ -204,6 +225,8 @@ html, body {
   color: #8A7E72;
 }
 
+[data-theme="dark"] .cover-issue { color: #6A6A6A; }
+
 .cover-tagline {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: clamp(0.9rem, 3.2vw, 1.4rem);
@@ -211,6 +234,8 @@ html, body {
   line-height: 1.3;
   color: #1A1410;
 }
+
+[data-theme="dark"] .cover-tagline { color: #C8C8C8; }
 
 .cover-topics {
   display: flex;
@@ -226,6 +251,8 @@ html, body {
   padding: 0.2rem 0;
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
+
+[data-theme="dark"] .cover-topics span { color: #6A6A6A; border-color: rgba(255,255,255,0.06); }
 
 /* 2.3 GET STARTED button */
 .btn-start {
@@ -250,6 +277,34 @@ html, body {
 }
 
 .btn-start:active { transform: scale(0.94); background: #333; }
+
+[data-theme="dark"] .btn-start { background: #E8E8E8; color: #111; }
+[data-theme="dark"] .btn-start:active { background: #ccc; }
+
+.btn-theme-toggle {
+  grid-area: start;
+  position: absolute;
+  top: max(env(safe-area-inset-top, 0px), 1rem);
+  right: 1.25rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.1);
+  color: #1A1410;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.btn-theme-toggle:active { transform: scale(0.9); }
+
+[data-theme="dark"] .btn-theme-toggle { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); color: #E8E8E8; }
 
 /* =========================================================
    PAGE 2 · IDENTITY SETUP
@@ -297,6 +352,9 @@ html, body {
 
 .underline-input::placeholder { color: rgba(0,0,0,0.2); }
 
+[data-theme="dark"] .underline-input { color: var(--text-main); border-color: var(--text-main); }
+[data-theme="dark"] .underline-input::placeholder { color: rgba(255,255,255,0.2); }
+
 .input-hint {
   display: none;
   font-size: 0.65rem;
@@ -304,6 +362,8 @@ html, body {
   margin-top: 0.4rem;
   letter-spacing: 0.05em;
 }
+
+[data-theme="dark"] .input-hint { color: #E74C3C; }
 
 .input-hint.visible { display: block; }
 
@@ -338,6 +398,10 @@ html, body {
   padding: 0.1rem;
   border: 1.5px solid transparent;
 }
+
+[data-theme="dark"] .spirit-item { background: rgba(255,255,255,0.1); }
+[data-theme="dark"] .spirit-item.selected { background: rgba(255,255,255,0.2); }
+[data-theme="dark"] .spirit-item:hover { background: rgba(255,255,255,0.15); }
 
 .spirit-emoji {
   font-size: 1.2rem;
@@ -433,6 +497,9 @@ html, body {
   transition: opacity 0.2s;
 }
 
+[data-theme="dark"] .btn-next, [data-theme="dark"] .btn-back { background: #E8E8E8; color: #111; }
+[data-theme="dark"] .btn-next:active, [data-theme="dark"] .btn-back:active { opacity: 0.7; background: #ccc; }
+
 .btn-next:active, .btn-back:active { opacity: 0.7; }
 
 /* =========================================================
@@ -484,6 +551,8 @@ html, body {
   color: #1A1410;
   line-height: 1.35;
 }
+
+[data-theme="dark"] .quiz-question { color: #E8E8E8; }
 
 /* 4.3 2×2 option grid */
 .quiz-options {
@@ -860,6 +929,8 @@ html, body {
 
 .btn-share:active { opacity: 0.7; }
 
+[data-theme="dark"] .btn-share { background: #E8E8E8; color: #111; }
+
 .btn-restart {
   background: transparent;
   border: none;
@@ -896,7 +967,7 @@ html, body {
 /* 9.1 Share card — fixed 3:4 ratio */
 #share-card {
   width: min(375px, calc(100vw - 2.5rem));
-  height: calc(min(375px, calc(100vw - 2.5rem)) * 4 / 3);
+  aspect-ratio: 3 / 4;
   position: relative;
   background: var(--accent-color);
   overflow: hidden;
@@ -959,6 +1030,10 @@ html, body {
   z-index: 1;
   text-align: center;
   padding: 0 1rem;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sc-palette {
@@ -1060,6 +1135,9 @@ html, body {
   color: var(--text-main);
   border: 2px solid var(--text-main);
 }
+
+[data-theme="dark"] .btn-save { background: #E8E8E8; color: #111; }
+[data-theme="dark"] .btn-publish { color: #E8E8E8; border-color: #E8E8E8; }
 
 .btn-save:active, .btn-publish:active { opacity: 0.7; }
 

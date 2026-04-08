@@ -6,10 +6,31 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Season Me · See Myself</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="description" content="Season Me — 发现你的专属色彩季相。通过审美测验与肤色分析，解锁你的色彩DNA，获取个性化穿搭配色方案。" />
+  <meta property="og:title" content="Season Me · See Myself — 发现你的色彩季相" />
+  <meta property="og:description" content="发现你的专属色彩季相。通过审美测验与肤色分析，解锁你的色彩DNA。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://season-me.vercel.app" />
+  <meta property="og:image" content="https://season-me.vercel.app/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Season Me · See Myself",
+    "description": "发现你的专属色彩季相。通过审美测验与肤色分析，解锁你的色彩DNA。",
+    "url": "https://season-me.vercel.app",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" }
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script defer data-domain="season-me.vercel.app" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
 
@@ -29,6 +50,7 @@
         </div>
       </div>
       <button class="btn-start" id="btnStart">GET<br/>STARTED</button>
+      <button class="btn-theme-toggle" id="btnThemeToggle" aria-label="Toggle dark mode">☀</button>
     </div>
   </section>
 

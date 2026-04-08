@@ -5,6 +5,15 @@
 'use strict';
 
 /* =========================================================
+   Plausible event helper
+   ========================================================= */
+function trackEvent(name) {
+  try {
+    if (window.plausible) window.plausible(name);
+  } catch { /* ad blockers may block plausible */ }
+}
+
+/* =========================================================
    1.7 localStorage utility
    ========================================================= */
 const smse = {
@@ -15,10 +24,22 @@ const smse = {
     try { return JSON.parse(localStorage.getItem('smse_' + key)); } catch { return null; }
   },
   set(key, val) {
-    try { localStorage.setItem('smse_' + key, val); } catch (e) { console.warn('localStorage write failed', e); }
+    try { localStorage.setItem('smse_' + key, val); }
+    catch (e) {
+      if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)) {
+        showToast('存储空间不足，部分数据可能无法保存');
+      }
+      console.warn('localStorage write failed', e);
+    }
   },
   setJSON(key, val) {
-    try { localStorage.setItem('smse_' + key, JSON.stringify(val)); } catch (e) { console.warn('localStorage write failed', e); }
+    try { localStorage.setItem('smse_' + key, JSON.stringify(val)); }
+    catch (e) {
+      if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)) {
+        showToast('存储空间不足，部分数据可能无法保存');
+      }
+      console.warn('localStorage write failed', e);
+    }
   },
   clear() {
     try {
@@ -26,6 +47,13 @@ const smse = {
         .filter(k => k.startsWith('smse_'))
         .forEach(k => localStorage.removeItem(k));
     } catch { /* ignore */ }
+  },
+  getUsage() {
+    try {
+      return Object.keys(localStorage)
+        .filter(k => k.startsWith('smse_'))
+        .reduce((sum, k) => sum + (localStorage.getItem(k) || '').length * 2, 0);
+    } catch { return 0; }
   }
 };
 
@@ -422,6 +450,7 @@ function initIdentityPage() {
       return;
     }
     smse.set('nickname', name);
+    trackEvent('QuizStarted');
     showPage('quiz');
   };
 }
@@ -500,7 +529,7 @@ const QUIZ_DATA = [
   {
     q: '走进空屋，第一眼希望看到？',
     options: ['极简留白', '秩序画廊', '复古沙龙', '原始自然'],
-    images: ['images/IMG_0924.jpg', 'images/IMG_0925.PNG', 'images/IMG_0926.jpg', 'images/IMG_0927.jpg'],
+    images: ['images/IMG_0924.jpg', 'images/IMG_0925.jpg', 'images/IMG_0926.jpg', 'images/IMG_0927.jpg'],
     positions: ['center 70%', 'center 70%', 'center 70%', 'center'],
     dims: [
       { E: 0.8, O: 0.8 }, { E: 0.6, O: 0.9 }, { E: 0.4, O: 0.3 }, { E: 0.2, O: 0.2 }
@@ -759,6 +788,9 @@ function processAndSavePhoto(dataUrl, quality = 0.7) {
       processAndSavePhoto(dataUrl, quality - 0.15);
       return;
     }
+    if (kb > 3072) {
+      showToast('照片较大，可能占用较多存储空间');
+    }
     smse.set('photo', result);
     stopCamera();
     showPage('darkroom');
@@ -796,6 +828,7 @@ function initDarkroomPage() {
     await Promise.all([calcPromise, minWait]);
     complete.classList.add('visible');
     await delay(900);
+    trackEvent('QuizCompleted');
     showPage('story');
   }
 
@@ -1048,7 +1081,10 @@ function initStoryPage() {
   buildPaletteCollage('paletteCollage', theme, false);
 
   // 8.7 Buttons
-  document.getElementById('btnGoShare').onclick = () => showPage('export');
+  document.getElementById('btnGoShare').onclick = () => {
+    trackEvent('ShareCardGenerated');
+    showPage('export');
+  };
   document.getElementById('btnRestart').onclick = () => {
     smse.clear();
     ThemeManager.apply('cool-summer');
@@ -1130,6 +1166,10 @@ async function generateShareImage() {
     canvas.toBlob(blob => {
       shareImageBlob = blob;
       shareImageUrl  = URL.createObjectURL(blob);
+      // Verify 3:4 ratio
+      if (Math.abs(canvas.width / canvas.height - 3/4) > 0.05) {
+        console.warn('Share card aspect ratio deviation:', canvas.width, 'x', canvas.height);
+      }
 
       document.getElementById('exportLoading').style.display = 'none';
       document.getElementById('exportButtons').style.display = 'flex';
@@ -1152,6 +1192,7 @@ function setupExportButtons() {
   // 9.4 Save
   document.getElementById('btnSave').onclick = () => {
     if (!shareImageUrl) return;
+    trackEvent('ImageSaved');
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     if (isIOS) {
       window.open(shareImageUrl, '_blank');
@@ -1172,6 +1213,7 @@ function setupExportButtons() {
       window.open(shareImageUrl, '_blank');
       return;
     }
+    trackEvent('ImageSaved');
     try {
       if (navigator.clipboard && navigator.clipboard.write) {
         const item = new ClipboardItem({ 'image/png': shareImageBlob });
@@ -1213,9 +1255,55 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedSeason = smse.get('season');
   if (savedSeason) ThemeManager.apply(savedSeason);
 
+  // Dark mode init
+  initDarkMode();
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
   // Show cover page
   document.getElementById('page-cover').setAttribute('data-active', 'true');
   document.getElementById('page-cover').style.display = 'block';
 
   initCoverPage();
 });
+
+/* =========================================================
+   DARK MODE
+   ========================================================= */
+function initDarkMode() {
+  const saved = smse.get('theme');
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    updateThemeToggle('dark');
+  } else if (saved === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+    updateThemeToggle('light');
+  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    updateThemeToggle('dark');
+  }
+
+  const btn = document.getElementById('btnThemeToggle');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        smse.set('theme', 'light');
+        updateThemeToggle('light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        smse.set('theme', 'dark');
+        updateThemeToggle('dark');
+      }
+    });
+  }
+}
+
+function updateThemeToggle(mode) {
+  const btn = document.getElementById('btnThemeToggle');
+  if (btn) btn.textContent = mode === 'dark' ? '☾' : '☀';
+}
