@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Season Me · See Myself</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== PAGE 1: THE COVER ===== -->
+  <section id="page-cover" class="page" data-active="true">
+    <div class="cover-grid">
+      <div class="cover-brand">
+        <div class="brand-letters" id="brandLetters"></div>
+      </div>
+      <div class="cover-meta">
+        <span class="cover-issue">VOL. 01 · 2024</span>
+        <p class="cover-tagline">YOUR AESTHETIC<br/>IDENTITY AWAITS</p>
+        <div class="cover-topics">
+          <span>COLOUR SEASON</span>
+          <span>SPIRIT ANIMAL</span>
+          <span>STYLE DNA</span>
+        </div>
+      </div>
+      <button class="btn-start" id="btnStart">GET<br/>STARTED</button>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 2: IDENTITY SETUP ===== -->
+  <section id="page-identity" class="page">
+    <div class="page-inner">
+      <div class="page-header">
+        <span class="page-num">01</span>
+        <span class="page-label">IDENTITY</span>
+        <div class="header-line"></div>
+      </div>
+      <div class="identity-content">
+        <div class="input-group">
+          <label class="input-label">YOUR NAME</label>
+          <input type="text" id="inputNickname" class="underline-input" placeholder="Enter your name" maxlength="20" autocomplete="off" />
+          <span class="input-hint" id="nicknameHint">请为你的美学档案命名</span>
+        </div>
+        <div class="spirit-section">
+          <p class="spirit-label">CHOOSE YOUR AESTHETIC SPIRIT</p>
+          <div class="spirit-grid" id="spiritGrid">
+            <!-- SVG spirits injected by JS -->
+          </div>
+        </div>
+        <div class="avatar-upload-section">
+          <label class="avatar-upload-label" id="avatarUploadLabel">
+            <input type="file" id="avatarFileInput" accept="image/*" style="display:none" />
+            <span id="avatarUploadText">+ Upload custom avatar (optional)</span>
+          </label>
+          <canvas id="avatarCanvas" style="display:none"></canvas>
+        </div>
+      </div>
+      <div class="page-footer">
+        <button class="btn-next" id="btnIdentityNext">NEXT →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 3: AESTHETIC QUIZ ===== -->
+  <section id="page-quiz" class="page">
+    <div class="page-inner quiz-inner">
+      <div class="quiz-progress-num" id="quizProgressNum">01</div>
+      <div class="quiz-content" id="quizContent">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 4: VISUAL SAMPLING ===== -->
+  <section id="page-sampling" class="page">
+    <div class="page-inner">
+      <div class="page-header">
+        <span class="page-num">03</span>
+        <span class="page-label">VISUAL SAMPLING</span>
+        <div class="header-line"></div>
+      </div>
+      <div class="sampling-content">
+        <div class="viewfinder-wrap">
+          <div class="viewfinder" id="viewfinder">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <video id="cameraVideo" autoplay playsinline muted></video>
+            <canvas id="photoCanvas" style="display:none"></canvas>
+            <img id="photoPreview" style="display:none" alt="preview" />
+          </div>
+          <div class="viewfinder-params">
+            <span class="param-text" id="paramText">ISO 400 · f/1.8 · 1/60s · RAW</span>
+          </div>
+        </div>
+        <div class="sampling-controls">
+          <button class="btn-shutter" id="btnShutter">◉ CAPTURE</button>
+          <label class="btn-gallery">
+            <input type="file" id="galleryInput" accept="image/*" style="display:none" />
+            ⊞ GALLERY
+          </label>
+          <button class="btn-retake" id="btnRetake" style="display:none">↺ RETAKE</button>
+          <button class="btn-confirm" id="btnConfirm" style="display:none">✓ CONFIRM →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 5: THE DARKROOM ===== -->
+  <section id="page-darkroom" class="page">
+    <div class="darkroom-inner">
+      <div class="scan-line" id="scanLine"></div>
+      <div class="darkroom-text">
+        <div class="typewriter-output" id="typewriterOutput"></div>
+        <div class="analysis-complete" id="analysisComplete">ANALYSIS COMPLETE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 6: THE FEATURE STORY ===== -->
+  <section id="page-story" class="page">
+    <div class="story-scroll">
+      <div class="season-title-wrap">
+        <div class="season-title" id="seasonTitle"><!-- injected --></div>
+        <div class="season-subtitle" id="seasonSubtitle"><!-- injected --></div>
+      </div>
+      <!-- Name card -->
+      <div class="name-card" id="nameCard">
+        <div class="name-card-watermark" id="nameCardWatermark"></div>
+        <div class="name-card-avatar" id="nameCardAvatar"></div>
+        <div class="name-card-nickname" id="nameCardNickname"></div>
+      </div>
+      <!-- Report -->
+      <div class="report-section">
+        <div class="report-label">COLOUR ANALYSIS</div>
+        <div class="report-copy" id="reportCopy"><!-- injected --></div>
+        <div class="report-label" style="margin-top: 2rem">YOUR PALETTE</div>
+        <div class="palette-collage" id="paletteCollage"><!-- injected --></div>
+      </div>
+      <div class="story-footer">
+        <button class="btn-share" id="btnGoShare">GENERATE SHARE CARD →</button>
+        <button class="btn-restart" id="btnRestart">重新测试</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 7: FINAL PROOF (SHARE EXPORT) ===== -->
+  <section id="page-export" class="page">
+    <div class="page-inner export-inner">
+      <div class="page-header">
+        <span class="page-num">07</span>
+        <span class="page-label">FINAL PROOF</span>
+        <div class="header-line"></div>
+      </div>
+      <!-- Share card (captured by html2canvas) -->
+      <div class="share-card-container">
+        <div id="share-card">
+          <div class="sc-watermark" id="scWatermark"></div>
+          <div class="sc-season-label" id="scSeasonLabel"></div>
+          <div class="sc-avatar" id="scAvatar"></div>
+          <div class="sc-nickname" id="scNickname"></div>
+          <div class="sc-analysis-label">COLOUR ANALYSIS</div>
+          <div class="sc-copy" id="scCopy"></div>
+          <div class="sc-palette" id="scPalette"></div>
+          <div class="sc-brand">SEASON ME · SEE MYSELF</div>
+        </div>
+      </div>
+      <div class="export-controls" id="exportControls">
+        <div class="export-loading" id="exportLoading">
+          <div class="export-spinner"></div>
+          <span>Generating your card...</span>
+        </div>
+        <div class="export-buttons" id="exportButtons" style="display:none">
+          <button class="btn-save" id="btnSave">⬇ SAVE TO CAMERA ROLL</button>
+          <button class="btn-publish" id="btnPublish">⊳ GO PUBLISH</button>
+        </div>
+        <p class="ios-hint" id="iosHint" style="display:none">长按图片即可保存到相册</p>
+      </div>
+      <button class="btn-back" id="btnBackToStory">← BACK</button>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

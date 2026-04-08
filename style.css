@@ -1,0 +1,1162 @@
+/* =========================================================
+   SEASON ME · GLOBAL STYLES
+   ========================================================= */
+
+/* ---------- 1.3 Font declarations ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  /* Use dvh where supported for accurate mobile viewport */
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Space Mono', 'Courier New', monospace;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- 1.4 CSS Variables (default theme: cool-summer) ---------- */
+:root {
+  --base-bg: #EEE9F0;
+  --accent-color: #9B8FAE;
+  --text-main: #2C2040;
+  --text-secondary: #6B5F7A;
+  --spirit-color: #9B8FAE;
+  --glow-color: rgba(155, 143, 174, 0.35);
+  --palette-1: #D4C5E2;
+  --palette-2: #B8AAC8;
+  --palette-3: #8E7FA0;
+  --palette-4: #F2EDF7;
+  --palette-5: #E8DFF0;
+  --transition-page: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- Page system ---------- */
+.page {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  height: 100dvh;
+  display: none;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.page[data-active="true"] { display: block; }
+
+.page-inner {
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0) 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Page header ---------- */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: max(env(safe-area-inset-top, 0px), 1rem) 1.25rem 0.6rem;
+  flex-shrink: 0;
+}
+
+.page-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent-color);
+}
+
+.page-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+}
+
+.header-line {
+  flex: 1;
+  height: 1px;
+  background: var(--text-main);
+  opacity: 0.15;
+}
+
+.page-footer {
+  padding: 1rem 1.25rem max(env(safe-area-inset-bottom, 0px), 1rem);
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   PAGE 1 · THE COVER
+   ========================================================= */
+#page-cover {
+  background: linear-gradient(175deg, #FAF8F5 0%, #EDE9E3 100%);
+  display: none;
+}
+
+#page-cover[data-active="true"] { display: block; }
+
+/* 2.1 Asymmetric grid */
+.cover-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  grid-template-rows: 1fr auto;
+  grid-template-areas:
+    "brand  meta"
+    "brand  start";
+  width: 100%; height: 100%;
+  padding: max(env(safe-area-inset-top, 0px), 1.5rem) 1.25rem max(env(safe-area-inset-bottom, 0px), 1rem) 0.75rem;
+}
+
+.cover-brand {
+  grid-area: brand;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-right: 0.75rem;
+  border-right: 1px solid rgba(0,0,0,0.08);
+}
+
+.brand-lockup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* "SEASON" — tight small-cap row */
+.brand-word-season {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 0.9;
+}
+
+.brand-letter {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 900;
+  font-size: clamp(2.8rem, 10vw, 5.5rem);
+  letter-spacing: 0.06em;
+  color: #1A1410;
+  display: block;
+  opacity: 0;
+  transform: translateY(20px);
+  will-change: transform, opacity;
+}
+
+/* Thin rule between SEASON and ME */
+.brand-rule {
+  width: 100%;
+  height: 1px;
+  background: rgba(0,0,0,0.18);
+  margin: 0.45rem 0 0.3rem;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform, opacity;
+}
+
+/* "ME" — display size */
+.brand-word-me {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 900;
+  font-size: clamp(5rem, 16vw, 9rem);
+  letter-spacing: -0.03em;
+  color: #1A1410;
+  line-height: 0.88;
+  display: block;
+  opacity: 0;
+  transform: translateY(24px);
+  will-change: transform, opacity;
+}
+
+/* "· see myself ·" tagline below */
+.brand-tagline-sub {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(0.65rem, 2.2vw, 1rem);
+  letter-spacing: 0.12em;
+  color: #8A7E72;
+  margin-top: 0.55rem;
+  opacity: 0;
+  will-change: opacity;
+}
+
+.cover-meta {
+  grid-area: meta;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 1.25rem;
+  gap: 1.25rem;
+}
+
+.cover-issue {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: #8A7E72;
+}
+
+.cover-tagline {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(0.9rem, 3.2vw, 1.4rem);
+  font-style: italic;
+  line-height: 1.3;
+  color: #1A1410;
+}
+
+.cover-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cover-topics span {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: #8A7E72;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+/* 2.3 GET STARTED button */
+.btn-start {
+  grid-area: start;
+  justify-self: end;
+  align-self: end;
+  width: clamp(72px, 20vw, 105px);
+  height: clamp(72px, 20vw, 105px);
+  border-radius: 50%;
+  background: #1A1410;
+  color: #FAF8F5;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.4;
+  transition: transform 0.2s, background 0.2s;
+  -webkit-appearance: none;
+}
+
+.btn-start:active { transform: scale(0.94); background: #333; }
+
+/* =========================================================
+   PAGE 2 · IDENTITY SETUP
+   ========================================================= */
+#page-identity {
+  background: var(--base-bg);
+}
+
+.identity-content {
+  flex: 1;
+  padding: 0.5rem 1.25rem 1rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.input-group {
+  position: relative;
+}
+
+.input-label {
+  display: block;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+/* 3.2 Underline input */
+.underline-input {
+  width: 100%;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 700;
+  color: var(--text-main);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--text-main);
+  padding: 0.2rem 0;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.underline-input::placeholder { color: rgba(0,0,0,0.2); }
+
+.input-hint {
+  display: none;
+  font-size: 0.65rem;
+  color: #C0392B;
+  margin-top: 0.4rem;
+  letter-spacing: 0.05em;
+}
+
+.input-hint.visible { display: block; }
+
+/* 3.3 Spirit grid */
+.spirit-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  color: var(--text-secondary);
+  margin-bottom: 0.6rem;
+}
+
+.spirit-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.4rem;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.spirit-item {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s, background 0.2s;
+  padding: 0.1rem;
+  border: 1.5px solid transparent;
+}
+
+.spirit-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
+  display: block;
+  filter: saturate(0.85);
+  transition: filter 0.2s, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.spirit-label-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.3rem;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.spirit-item:hover {
+  transform: scale(1.08);
+  background: rgba(255,255,255,0.7);
+}
+
+.spirit-item.selected {
+  border-color: var(--accent-color);
+  background: rgba(255,255,255,0.9);
+  transform: scale(1.12);
+  animation: spirit-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.spirit-item.selected .spirit-emoji {
+  filter: saturate(1.3);
+  transform: scale(1.2);
+  animation: spirit-emoji-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.spirit-item:active { transform: scale(0.92); }
+
+@keyframes spirit-pop {
+  0%   { transform: scale(0.85); }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1.12); }
+}
+
+@keyframes spirit-emoji-bounce {
+  0%   { transform: scale(0.8) rotate(-8deg); }
+  40%  { transform: scale(1.35) rotate(4deg); }
+  70%  { transform: scale(1.1) rotate(-2deg); }
+  100% { transform: scale(1.2) rotate(0deg); }
+}
+
+/* Emoji on result card & share card */
+.card-spirit-emoji {
+  font-size: 3rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Avatar upload */
+.avatar-upload-section { margin-top: -0.5rem; }
+
+.avatar-upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+#avatarUploadText {
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--accent-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Buttons */
+.btn-next, .btn-back {
+  width: 100%;
+  padding: 1rem;
+  background: var(--text-main);
+  color: var(--base-bg);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: opacity 0.2s;
+}
+
+.btn-next:active, .btn-back:active { opacity: 0.7; }
+
+/* =========================================================
+   PAGE 3 · AESTHETIC QUIZ
+   ========================================================= */
+#page-quiz {
+  background: var(--base-bg);
+}
+
+.quiz-inner {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Big hollow progress number */
+.quiz-progress-num {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(5rem, 22vw, 9rem);
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(0,0,0,0.08);
+  line-height: 1;
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
+}
+
+.quiz-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  padding-top: 5rem;
+  gap: 1rem;
+}
+
+.quiz-question {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1rem, 3.8vw, 1.5rem);
+  font-weight: 700;
+  color: #1A1410;
+  line-height: 1.35;
+}
+
+/* 4.3 2×2 option grid */
+.quiz-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.quiz-option {
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  filter: grayscale(100%);
+  transition: filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.quiz-option-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.3s ease;
+}
+
+.quiz-option:active .quiz-option-bg { transform: scale(1.04); }
+
+.quiz-option-label {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  line-height: 1.4;
+}
+
+.quiz-option.touched { filter: grayscale(0%); }
+.quiz-option.selected { filter: grayscale(0%); outline: 3px solid #fff; }
+
+/* =========================================================
+   PAGE 4 · VISUAL SAMPLING
+   ========================================================= */
+#page-sampling {
+  background: #1A1A1A;
+  color: #eee;
+}
+
+#page-sampling .page-header { border-color: rgba(255,255,255,0.1); }
+#page-sampling .page-num, #page-sampling .page-label { color: rgba(255,255,255,0.5); }
+#page-sampling .header-line { background: rgba(255,255,255,0.15); opacity: 1; }
+
+.sampling-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.25rem max(env(safe-area-inset-bottom, 0px), 1.25rem);
+  gap: 1.25rem;
+  min-height: 0;
+}
+
+.viewfinder-wrap {
+  width: min(80vw, 70vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 5.1 Viewfinder with L-shaped corners */
+.viewfinder {
+  width: min(80vw, 70vh);
+  height: min(80vw, 70vh);
+  max-width: 360px;
+  max-height: 360px;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+}
+
+.viewfinder video,
+.viewfinder img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
+.corner {
+  position: absolute;
+  width: 22px; height: 22px;
+  z-index: 2;
+}
+
+.corner.tl { top: 0; left: 0; border-top: 2px solid #fff; border-left: 2px solid #fff; }
+.corner.tr { top: 0; right: 0; border-top: 2px solid #fff; border-right: 2px solid #fff; }
+.corner.bl { bottom: 0; left: 0; border-bottom: 2px solid #fff; border-left: 2px solid #fff; }
+.corner.br { bottom: 0; right: 0; border-bottom: 2px solid #fff; border-right: 2px solid #fff; }
+
+.viewfinder-params {
+  width: 100%;
+  text-align: center;
+}
+
+.param-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.4);
+}
+
+.sampling-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.btn-shutter, .btn-gallery, .btn-retake, .btn-confirm {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.75rem 1.25rem;
+  border-radius: 3px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  background: transparent;
+  color: #eee;
+  cursor: pointer;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-shutter:active, .btn-gallery:active,
+.btn-retake:active, .btn-confirm:active { background: rgba(255,255,255,0.1); }
+
+.btn-confirm {
+  background: #fff;
+  color: #1A1A1A;
+  border-color: #fff;
+}
+
+/* =========================================================
+   PAGE 5 · THE DARKROOM
+   ========================================================= */
+#page-darkroom {
+  background: #0A0A0A;
+}
+
+.darkroom-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 6.1 Scan line */
+.scan-line {
+  position: absolute;
+  left: 0; top: -2px;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-color, #9B8FAE), transparent);
+  animation: scan 2500ms linear infinite;
+  will-change: transform;
+}
+
+@keyframes scan {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100vh); }
+}
+
+.darkroom-text {
+  text-align: center;
+  padding: 2rem 1.5rem;
+  padding-top: max(env(safe-area-inset-top, 0px), 2rem);
+}
+
+.typewriter-output {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.6);
+  min-height: 5rem;
+  line-height: 2.2;
+}
+
+.analysis-complete {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.3em;
+  color: var(--accent-color, #9B8FAE);
+  opacity: 0;
+  margin-top: 1rem;
+  transition: opacity 0.8s;
+}
+
+.analysis-complete.visible { opacity: 1; }
+
+/* =========================================================
+   PAGE 6 · THE FEATURE STORY
+   ========================================================= */
+#page-story {
+  background: var(--base-bg);
+  overflow-y: auto;
+}
+
+.story-scroll {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 2rem);
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Season title */
+.season-title-wrap {
+  padding: 1.75rem 1.25rem 1rem;
+}
+
+.season-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.5rem, 11vw, 5rem);
+  font-weight: 900;
+  line-height: 0.9;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.season-subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  color: var(--text-secondary);
+  margin-top: 0.6rem;
+}
+
+/* Name card */
+.name-card {
+  position: relative;
+  margin: 0 1.25rem;
+  background: var(--accent-color);
+  border-radius: 16px;
+  padding: 2rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.name-card-watermark {
+  position: absolute;
+  inset: 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  color: rgba(255,255,255,0.08);
+  transform: rotate(-20deg);
+  white-space: pre;
+  pointer-events: none;
+  overflow: hidden;
+  line-height: 2.4;
+  word-break: break-all;
+  padding: 1rem;
+}
+
+.name-card-avatar {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.name-card-avatar img,
+.name-card-avatar svg { width: 100%; height: 100%; object-fit: cover; }
+
+.name-card-nickname {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: 0.05em;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+/* Report section */
+.report-section {
+  padding: 1.5rem 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.report-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+}
+
+.report-copy {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-main);
+  font-style: italic;
+}
+
+/* Palette collage */
+.palette-collage {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.palette-swatch {
+  width: clamp(44px, 13vw, 64px);
+  height: clamp(60px, 18vw, 86px);
+  border-radius: 6px;
+}
+
+/* Story footer */
+.story-footer {
+  padding: 1.5rem 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.btn-share {
+  width: 100%;
+  padding: 1rem;
+  background: var(--text-main);
+  color: var(--base-bg);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: opacity 0.2s;
+}
+
+.btn-share:active { opacity: 0.7; }
+
+.btn-restart {
+  background: transparent;
+  border: none;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0.5rem 0;
+  -webkit-appearance: none;
+}
+
+/* =========================================================
+   PAGE 7 · FINAL PROOF
+   ========================================================= */
+#page-export {
+  background: var(--base-bg);
+}
+
+.export-inner {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+}
+
+.share-card-container {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+}
+
+/* 9.1 Share card — fixed 3:4 ratio */
+#share-card {
+  width: min(375px, calc(100vw - 2.5rem));
+  height: calc(min(375px, calc(100vw - 2.5rem)) * 4 / 3);
+  position: relative;
+  background: var(--accent-color);
+  overflow: hidden;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.sc-watermark {
+  position: absolute;
+  inset: 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: rgba(255,255,255,0.07);
+  transform: rotate(-20deg);
+  white-space: pre;
+  overflow: hidden;
+  line-height: 2.4;
+  word-break: break-all;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.sc-season-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  color: rgba(255,255,255,0.7);
+  position: relative;
+  z-index: 1;
+}
+
+.sc-avatar {
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.sc-avatar img,
+.sc-avatar svg { width: 100%; height: 100%; object-fit: cover; }
+
+.sc-nickname {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: 0.05em;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.sc-palette {
+  display: flex;
+  gap: 0.4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.sc-swatch {
+  width: 28px; height: 40px;
+  border-radius: 4px;
+}
+
+.sc-analysis-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.55);
+  position: relative;
+  z-index: 1;
+  margin-top: 0.25rem;
+}
+
+.sc-copy {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.62rem;
+  font-style: italic;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.85);
+  text-align: center;
+  padding: 0 1.25rem;
+  position: relative;
+  z-index: 1;
+  max-width: 320px;
+}
+
+.sc-brand {
+  position: absolute;
+  bottom: 1rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.25em;
+  color: rgba(255,255,255,0.35);
+  z-index: 1;
+}
+
+/* Export controls */
+.export-controls {
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.export-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.export-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.export-buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-save, .btn-publish {
+  width: 100%;
+  padding: 1rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: opacity 0.2s;
+}
+
+.btn-save { background: var(--text-main); color: var(--base-bg); border: none; }
+.btn-publish {
+  background: transparent;
+  color: var(--text-main);
+  border: 2px solid var(--text-main);
+}
+
+.btn-save:active, .btn-publish:active { opacity: 0.7; }
+
+.ios-hint {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+.polaroid-enter {
+  filter: blur(8px);
+  transition: filter 600ms linear;
+}
+.polaroid-enter.clear { filter: blur(0); }
+
+/* Pulsing placeholder while camera loads */
+.camera-placeholder {
+  width: 100%; height: 100%;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.3);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+}
+
+/* =========================================================
+   MOBILE — compact screens ≤ 390px
+   ========================================================= */
+@media (max-width: 390px) {
+  .cover-grid {
+    grid-template-columns: 5fr 7fr;
+  }
+
+  .brand-word-me {
+    font-size: clamp(3.2rem, 12vw, 5rem);
+  }
+
+  .quiz-progress-num {
+    font-size: clamp(4rem, 18vw, 7rem);
+  }
+
+  .quiz-content {
+    padding-top: 4.5rem;
+  }
+
+  .btn-next, .btn-back, .btn-share, .btn-save, .btn-publish {
+    padding: 0.85rem 1rem;
+    font-size: 0.7rem;
+  }
+
+  .name-card-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .name-card-nickname {
+    font-size: 1.2rem;
+  }
+}
+
+/* Phones with very short height (landscape-ish) */
+@media (max-height: 650px) {
+  .cover-grid {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .identity-content {
+    gap: 0.9rem;
+  }
+
+  .spirit-grid {
+    gap: 0.35rem;
+  }
+
+  .spirit-item {
+    padding: 0.25rem 0.2rem;
+  }
+
+  .spirit-emoji {
+    font-size: clamp(1.1rem, 4.5vw, 1.5rem);
+  }
+
+  .quiz-content {
+    padding-top: 4rem;
+    gap: 0.75rem;
+  }
+
+  .sampling-content {
+    gap: 0.75rem;
+  }
+}
