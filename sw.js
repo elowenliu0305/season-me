@@ -1,5 +1,5 @@
 const SHELL = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json'];
-const CACHE_NAME = 'season-me-v1';
+const CACHE_NAME = 'season-me-v2';
 const IMAGE_CACHE = 'season-me-images-v1';
 const IMAGE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -27,7 +27,7 @@ self.addEventListener('fetch', event => {
 
   // Skip non-GET and cross-origin requests (except CDN)
   if (event.request.method !== 'GET') return;
-  if (url.origin !== self.location.origin && !url.hostname.includes('cloudflare.com') && !url.hostname.includes('gstatic.com') && !url.hostname.includes('googleapis.com')) return;
+  if (url.origin !== self.location.origin && !url.hostname.includes('cloudflare.com') && !url.hostname.includes('gstatic.com') && !url.hostname.includes('googleapis.com') && !url.hostname.includes('unpkg.com') && !url.hostname.includes('cdn.jsdelivr.net') && !url.hostname.includes('cartocdn.com') && !url.hostname.includes('supabase.co') && !url.hostname.includes('openstreetmap.org') && !url.hostname.includes('nominatim')) return;
 
   // Quiz images: cache on first use
   if (url.pathname.startsWith('/images/')) {

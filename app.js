@@ -323,7 +323,16 @@ class ThemeManager {
   static apply(seasonId) {
     const theme = ThemeManager.THEMES[seasonId] || ThemeManager.THEMES['cool-summer'];
     const root = document.documentElement;
-    Object.entries(theme).forEach(([k, v]) => root.style.setProperty(k, v));
+    const isDark = root.getAttribute('data-theme') === 'dark';
+
+    Object.entries(theme).forEach(([k, v]) => {
+      if (isDark) {
+        if (k === '--base-bg') v = '#0F0F0F';
+        if (k === '--text-main') v = '#E8E8E8';
+        if (k === '--text-secondary') v = '#9A9A9A';
+      }
+      root.style.setProperty(k, v);
+    });
   }
 
   static getPreviewGlow(spiritId) {
@@ -334,7 +343,7 @@ class ThemeManager {
 /* =========================================================
    1.6 Page router
    ========================================================= */
-const PAGES = ['cover', 'identity', 'quiz', 'sampling', 'darkroom', 'story', 'export'];
+const PAGES = ['cover', 'identity', 'quiz', 'sampling', 'darkroom', 'story', 'export', 'community'];
 let currentPage = 'cover';
 
 function showPage(pageId, direction = 'forward') {
@@ -377,6 +386,7 @@ function showPage(pageId, direction = 'forward') {
   if (pageId === 'darkroom') initDarkroomPage();
   if (pageId === 'story') initStoryPage();
   if (pageId === 'export') initExportPage();
+  if (pageId === 'community') initCommunityPage();
 }
 
 /* =========================================================
@@ -510,6 +520,7 @@ function initCoverPage() {
   container.appendChild(lockup);
 
   document.getElementById('btnStart').onclick = () => showPage('identity');
+  document.getElementById('btnCommunity').onclick = () => showPage('community');
 }
 
 /* 2.4 Font load fallback */
@@ -768,13 +779,14 @@ function initSamplingPage() {
   const btnRetake = document.getElementById('btnRetake');
   const btnConfirm= document.getElementById('btnConfirm');
   const galleryIn = document.getElementById('galleryInput');
+  const captureActions = document.getElementById('captureActions');
+  const previewActions = document.getElementById('previewActions');
 
   // Reset UI
   video.style.display = 'block';
   preview.style.display = 'none';
-  btnShutter.style.display = '';
-  btnRetake.style.display = 'none';
-  btnConfirm.style.display = 'none';
+  captureActions.style.display = '';
+  previewActions.style.display = 'none';
 
   // 5.2 Start camera
   startCamera();
@@ -792,9 +804,8 @@ function initSamplingPage() {
     capturedDataUrl = null;
     preview.style.display = 'none';
     video.style.display = 'block';
-    btnShutter.style.display = '';
-    btnRetake.style.display = 'none';
-    btnConfirm.style.display = 'none';
+    captureActions.style.display = '';
+    previewActions.style.display = 'none';
     // Reset gallery input so same file can be reselected
     galleryIn.value = '';
     startCamera();
@@ -818,9 +829,10 @@ async function startCamera() {
     });
     video.srcObject = cameraStream;
   } catch {
-    // 5.4 Degrade gracefully
+    // 5.4 Degrade gracefully — hide capture button, show placeholder
     video.style.display = 'none';
-    document.getElementById('btnShutter').style.display = 'none';
+    const shutter = document.getElementById('btnShutter');
+    if (shutter) shutter.style.display = 'none';
   }
 }
 
@@ -858,9 +870,8 @@ function loadImageFromFile(file) {
 function showPhotoPreview(dataUrl) {
   const video   = document.getElementById('cameraVideo');
   const preview = document.getElementById('photoPreview');
-  const btnShutter= document.getElementById('btnShutter');
-  const btnRetake = document.getElementById('btnRetake');
-  const btnConfirm= document.getElementById('btnConfirm');
+  const captureActions = document.getElementById('captureActions');
+  const previewActions = document.getElementById('previewActions');
 
   video.style.display = 'none';
   preview.src = dataUrl;
@@ -873,9 +884,8 @@ function showPhotoPreview(dataUrl) {
     setTimeout(() => preview.classList.add('clear'), 50);
   });
 
-  btnShutter.style.display = 'none';
-  btnRetake.style.display = '';
-  btnConfirm.style.display = '';
+  captureActions.style.display = 'none';
+  previewActions.style.display = '';
 }
 
 // 5.6 Crop center square + compress
@@ -1345,6 +1355,11 @@ function setupExportButtons() {
       window.open(shareImageUrl, '_blank');
     }
   };
+
+  // 9.7 Go to community
+  document.getElementById('btnGoCommunity').onclick = () => {
+    showPage('community');
+  };
 }
 
 function showToast(msg) {
@@ -1367,15 +1382,449 @@ function showToast(msg) {
 }
 
 /* =========================================================
+   10. COMMUNITY MAP
+   ========================================================= */
+
+const SUPABASE_URL = 'https://ufwogjbbhkhnxqtdbplj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmd29namJiaGtobnhxdGRicGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjcxMzEsImV4cCI6MjA5MTMwMzEzMX0.bc1dEzRlROKsmwdDEFXIandH9Ybm5EN0J44txlFR0Wo';
+
+let _sb = null;
+function getSupabase() {
+  if (_sb) return _sb;
+  if (typeof supabase === 'undefined' || !supabase.createClient) return null;
+  _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return _sb;
+}
+
+function getSessionId() {
+  let id = smse.get('sessionId');
+  if (!id) {
+    id = crypto.randomUUID ? crypto.randomUUID() :
+      'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
+    smse.set('sessionId', id);
+  }
+  return id;
+}
+
+let communityMap = null;
+let communityMarkers = null;
+let communityPosts = [];
+let userLocation = null;
+
+function initCommunityPage() {
+  const sb = getSupabase();
+  if (!sb) {
+    showToast('Community is not available yet');
+    return;
+  }
+
+  // Initialize map
+  if (!communityMap) {
+    communityMap = L.map('communityMap', {
+      center: [30, 110],
+      zoom: 3,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+    }).addTo(communityMap);
+
+    communityMarkers = L.layerGroup().addTo(communityMap);
+    L.control.zoom({ position: 'bottomleft' }).addTo(communityMap);
+  }
+
+  // Fix map rendering after page becomes visible
+  setTimeout(() => communityMap.invalidateSize(), 150);
+
+  // Back button
+  document.getElementById('btnCommunityBack').onclick = () => {
+    closeCommunitySheet();
+    showPage('cover', 'backward');
+  };
+
+  // FAB -> open post creation modal
+  document.getElementById('btnCommunityPost').onclick = () => openPostModal();
+
+  // Close modal
+  document.getElementById('btnPostModalClose').onclick = () => closePostModal();
+
+  // Detect location button
+  document.getElementById('btnDetectLocation').onclick = detectLocation;
+
+  // Submit post
+  document.getElementById('btnSubmitPost').onclick = submitPost;
+
+  // Close sheet on map click
+  communityMap.on('click', () => closeCommunitySheet());
+
+  // Load posts from Supabase
+  loadCommunityPosts();
+
+  // Try to get user location
+  if (!userLocation) detectLocation();
+}
+
+async function loadCommunityPosts() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const { data, error } = await sb
+    .from('community_posts')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error('Failed to load community posts:', error);
+    return;
+  }
+
+  communityPosts = data || [];
+  document.getElementById('communityPostCount').textContent = communityPosts.length + ' posts';
+  renderMapMarkers();
+}
+
+function renderMapMarkers() {
+  if (!communityMarkers) return;
+  communityMarkers.clearLayers();
+
+  communityPosts.forEach(post => {
+    const fallbackHtml = getSpiritEmojiHtml(post.spirit);
+    const icon = L.divIcon({
+      className: 'community-marker-wrapper',
+      html: '<div class="community-marker"><img src="' + post.card_image_url + '" alt="' + escapeAttr(post.nickname) + '" onerror="this.parentElement.innerHTML=\'' + fallbackHtml.replace(/'/g, "\\'") + '\'" /></div>',
+      iconSize: [48, 48],
+      iconAnchor: [24, 24],
+    });
+
+    const marker = L.marker([post.latitude, post.longitude], { icon })
+      .addTo(communityMarkers);
+
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      openCommunitySheet(post);
+    });
+  });
+}
+
+function getSpiritEmojiHtml(spiritId) {
+  const s = SPIRITS[spiritId];
+  if (s) return '<span style="font-size:1.5rem;display:flex;align-items:center;justify-content:center;width:100%;height:100%">' + s.emoji + '</span>';
+  return '<span style="font-size:1rem;display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#999">?</span>';
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function openCommunitySheet(post) {
+  const sheet = document.getElementById('communitySheet');
+  const content = document.getElementById('communitySheetContent');
+
+  const liked = isPostLikedByUser(post.id);
+  const spiritEmoji = getSpiritEmojiHtml(post.spirit);
+  const seasonLabel = SEASON_META[post.season] ? SEASON_META[post.season].en : post.season;
+
+  content.innerHTML =
+    '<div style="display:flex;gap:1rem;align-items:flex-start">' +
+      '<img src="' + post.card_image_url + '" alt="card" ' +
+        'style="width:110px;height:147px;object-fit:cover;border-radius:10px;border:1px solid rgba(0,0,0,0.1);flex-shrink:0" ' +
+        'onerror="this.style.display=\'none\'" />' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-family:Space Mono,monospace;font-size:0.5rem;letter-spacing:0.15em;color:var(--text-secondary)">' + escapeHtml(seasonLabel) + '</div>' +
+        '<div style="font-family:Playfair Display,serif;font-size:1.05rem;font-weight:700;color:var(--text-main);margin-top:0.15rem">' + escapeHtml(post.nickname) + '</div>' +
+        '<div style="font-size:0.85rem;margin-top:0.15rem">' + spiritEmoji + ' ' + escapeHtml(SPIRITS[post.spirit] ? SPIRITS[post.spirit].label : post.spirit) + '</div>' +
+        (post.quote_text ? '<p style="font-family:Playfair Display,serif;font-style:italic;font-size:0.8rem;color:var(--text-main);margin-top:0.5rem;line-height:1.5">\u201C' + escapeHtml(post.quote_text) + '\u201D</p>' : '') +
+        (post.location_label ? '<div style="font-family:Space Mono,monospace;font-size:0.5rem;color:var(--text-secondary);margin-top:0.4rem">\uD83D\uDCCD ' + escapeHtml(post.location_label) + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.85rem;padding-top:0.65rem;border-top:1px solid rgba(0,0,0,0.08)">' +
+      '<button class="community-like-btn ' + (liked ? 'liked' : '') + '" onclick="toggleLike(\'' + post.id + '\')">' +
+        (liked ? '\u2665' : '\u2661') + ' ' + post.likes_count +
+      '</button>' +
+      '<span style="font-family:Space Mono,monospace;font-size:0.5rem;color:var(--text-secondary)">' + formatTimeAgo(post.created_at) + '</span>' +
+    '</div>';
+
+  sheet.classList.add('open');
+}
+
+function closeCommunitySheet() {
+  document.getElementById('communitySheet').classList.remove('open');
+}
+
+function isPostLikedByUser(postId) {
+  const liked = smse.getJSON('communityLikes') || [];
+  return liked.includes(postId);
+}
+
+async function toggleLike(postId) {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const sessionId = getSessionId();
+  const alreadyLiked = isPostLikedByUser(postId);
+
+  try {
+    if (alreadyLiked) {
+      await sb.from('community_likes').delete().match({ post_id: postId, session_id: sessionId });
+      await sb.rpc('decrement_likes', { post_id_input: postId });
+    } else {
+      await sb.from('community_likes').insert({ post_id: postId, session_id: sessionId });
+      await sb.rpc('increment_likes', { post_id_input: postId });
+    }
+
+    const liked = (smse.getJSON('communityLikes') || []);
+    if (alreadyLiked) {
+      smse.setJSON('communityLikes', liked.filter(id => id !== postId));
+    } else {
+      liked.push(postId);
+      smse.setJSON('communityLikes', liked);
+    }
+
+    await loadCommunityPosts();
+  } catch (err) {
+    console.error('Toggle like failed:', err);
+  }
+}
+
+// Make toggleLike globally accessible for onclick
+window.toggleLike = toggleLike;
+
+function formatTimeAgo(isoString) {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + 'h ago';
+  const days = Math.floor(hours / 24);
+  return days + 'd ago';
+}
+
+/* Post creation flow */
+async function openPostModal() {
+  const season = smse.get('season');
+  if (!season) {
+    showToast('Complete the quiz first to share your card');
+    return;
+  }
+
+  // Re-generate share card blob if not available
+  if (!shareImageBlob) {
+    await ensureShareCardPopulated();
+    await generateShareImageForCommunity();
+  }
+
+  if (!shareImageBlob) {
+    showToast('Failed to generate share card');
+    return;
+  }
+
+  const modal = document.getElementById('communityPostModal');
+  const preview = document.getElementById('communityCardPreview');
+
+  if (shareImageUrl) {
+    preview.innerHTML = '<img src="' + shareImageUrl + '" />';
+  }
+
+  modal.classList.add('active');
+
+  if (!userLocation) detectLocation();
+}
+
+function ensureShareCardPopulated() {
+  const season = smse.get('season') || 'cool-summer';
+  const meta = SEASON_META[season];
+  const theme = ThemeManager.THEMES[season] || ThemeManager.THEMES['cool-summer'];
+
+  document.getElementById('scWatermark').textContent = ((meta.keywords[0] + '  ').repeat(30));
+  document.getElementById('scSeasonLabel').textContent = meta.en;
+
+  const scAvatar = document.getElementById('scAvatar');
+  const savedAvatar = smse.get('avatar');
+  const savedSpirit = smse.get('spirit') || 'swan';
+  if (savedAvatar) {
+    scAvatar.innerHTML = '<img src="' + savedAvatar + '" crossorigin="anonymous" alt="avatar" />';
+  } else {
+    const spiritData = SPIRITS[savedSpirit] || SPIRITS.swan;
+    scAvatar.innerHTML = '<span class="card-spirit-emoji">' + spiritData.emoji + '</span>';
+  }
+
+  document.getElementById('scNickname').textContent = smse.get('nickname') || 'MYSTIC';
+  document.getElementById('scCopy').textContent = meta.copy;
+  buildPaletteCollage('scPalette', theme, true);
+  document.getElementById('share-card').style.background = theme['--accent-color'];
+
+  // Make the share-card visible temporarily for html2canvas
+  const container = document.getElementById('share-card').parentElement;
+  container.style.visibility = 'visible';
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+}
+
+function restoreShareCardContainer() {
+  const container = document.getElementById('share-card').parentElement;
+  container.style.visibility = '';
+  container.style.position = '';
+  container.style.left = '';
+  container.style.top = '';
+}
+
+async function generateShareImageForCommunity() {
+  try {
+    await document.fonts.ready;
+    const card = document.getElementById('share-card');
+    const canvas = await html2canvas(card, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      logging: false,
+    });
+
+    return new Promise((resolve) => {
+      canvas.toBlob(blob => {
+        if (shareImageUrl) URL.revokeObjectURL(shareImageUrl);
+        shareImageBlob = blob;
+        shareImageUrl = URL.createObjectURL(blob);
+        restoreShareCardContainer();
+        resolve(blob);
+      }, 'image/png');
+    });
+  } catch (err) {
+    console.error('html2canvas community error', err);
+    restoreShareCardContainer();
+    return null;
+  }
+}
+
+function closePostModal() {
+  document.getElementById('communityPostModal').classList.remove('active');
+}
+
+function detectLocation() {
+  const label = document.getElementById('communityLocationLabel');
+  if (!label) return;
+  label.textContent = 'Detecting location...';
+
+  if (!navigator.geolocation) {
+    label.textContent = 'Location unavailable';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      reverseGeocode(userLocation.lat, userLocation.lng);
+    },
+    (err) => {
+      console.warn('Geolocation error:', err);
+      label.textContent = 'Location unavailable';
+      userLocation = { lat: 0, lng: 0 };
+    },
+    { enableHighAccuracy: false, timeout: 10000 }
+  );
+}
+
+async function reverseGeocode(lat, lng) {
+  const label = document.getElementById('communityLocationLabel');
+  try {
+    const resp = await fetch(
+      'https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&accept-language=zh',
+      { headers: { 'User-Agent': 'SeasonMe/1.0' } }
+    );
+    const data = await resp.json();
+    const city = data.address?.city || data.address?.town || data.address?.state || '';
+    const country = data.address?.country || '';
+    label.textContent = city ? (city + ', ' + country) : (country || (lat.toFixed(2) + ', ' + lng.toFixed(2)));
+  } catch {
+    label.textContent = lat.toFixed(2) + ', ' + lng.toFixed(2);
+  }
+}
+
+async function submitPost() {
+  const quoteInput = document.getElementById('communityQuoteInput');
+  const submitBtn = document.getElementById('btnSubmitPost');
+
+  if (!userLocation) {
+    showToast('Please wait for location detection');
+    return;
+  }
+  if (!shareImageBlob) {
+    showToast('No share card available');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'PUBLISHING...';
+
+  try {
+    // Step 1: Upload image via API
+    const formData = new FormData();
+    formData.append('file', shareImageBlob, getSessionId() + '_' + Date.now() + '.png');
+
+    const uploadResp = await fetch('/api/upload-card', { method: 'POST', body: formData });
+    if (!uploadResp.ok) throw new Error('Image upload failed');
+    const { url: cardImageUrl } = await uploadResp.json();
+
+    // Step 2: Create post in Supabase
+    const sb = getSupabase();
+    const locationLabel = document.getElementById('communityLocationLabel').textContent;
+
+    const { data, error } = await sb
+      .from('community_posts')
+      .insert({
+        session_id: getSessionId(),
+        nickname: smse.get('nickname') || 'ANONYMOUS',
+        spirit: smse.get('spirit') || 'swan',
+        season: smse.get('season') || 'cool-summer',
+        card_image_url: cardImageUrl,
+        quote_text: quoteInput.value.trim().slice(0, 100),
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+        location_label: locationLabel,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    showToast('Shared to community!');
+    closePostModal();
+    quoteInput.value = '';
+
+    await loadCommunityPosts();
+    if (communityMap && data) {
+      communityMap.flyTo([data.latitude, data.longitude], 10, { duration: 1.5 });
+    }
+  } catch (err) {
+    console.error('Post submission failed:', err);
+    showToast('Failed to share \u2014 please try again');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'PUBLISH TO MAP';
+  }
+}
+
+/* =========================================================
    INIT
    ========================================================= */
 document.addEventListener('DOMContentLoaded', () => {
-  // Apply default / saved theme
+  // Dark mode init first (sets data-theme attribute)
+  initDarkMode();
+
+  // Apply season theme (respects dark mode)
   const savedSeason = smse.get('season');
   if (savedSeason) ThemeManager.apply(savedSeason);
-
-  // Dark mode init
-  initDarkMode();
 
   // Register service worker
   if ('serviceWorker' in navigator) {
@@ -1418,6 +1867,9 @@ function initDarkMode() {
         smse.set('theme', 'dark');
         updateThemeToggle('dark');
       }
+      // Re-apply season theme to update CSS vars for new mode
+      const savedSeason = smse.get('season');
+      if (savedSeason) ThemeManager.apply(savedSeason);
     });
   }
 }

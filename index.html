@@ -29,7 +29,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
   <script defer data-domain="season-me.vercel.app" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
@@ -49,7 +50,10 @@
           <span>STYLE DNA</span>
         </div>
       </div>
-      <button class="btn-start" id="btnStart">GET<br/>STARTED</button>
+      <div class="cover-start-area">
+        <button class="btn-community" id="btnCommunity">COMMUNITY MAP</button>
+        <button class="btn-start" id="btnStart">GET<br/>STARTED</button>
+      </div>
       <button class="btn-theme-toggle" id="btnThemeToggle" aria-label="Toggle dark mode">☀</button>
     </div>
   </section>
@@ -101,13 +105,15 @@
   <!-- ===== PAGE 4: VISUAL SAMPLING ===== -->
   <section id="page-sampling" class="page">
     <div class="page-inner">
-      <div class="page-header">
-        <span class="page-num">03</span>
-        <span class="page-label">VISUAL SAMPLING</span>
-        <div class="header-line"></div>
+      <!-- Editorial Header -->
+      <div class="sampling-header">
+        <h1 class="sampling-title">上传一张正脸照</h1>
+        <p class="sampling-subtitle">请确保光线充足，露出面部特征以获得最佳色彩分析效果</p>
       </div>
+
+      <!-- Central Glass Card with Viewfinder -->
       <div class="sampling-content">
-        <div class="viewfinder-wrap">
+        <div class="glass-card">
           <div class="viewfinder" id="viewfinder">
             <div class="corner tl"></div>
             <div class="corner tr"></div>
@@ -117,19 +123,47 @@
             <canvas id="photoCanvas" style="display:none"></canvas>
             <img id="photoPreview" style="display:none" alt="preview" />
           </div>
-          <div class="viewfinder-params">
-            <span class="param-text" id="paramText">ISO 400 · f/1.8 · 1/60s · RAW</span>
+
+          <!-- Capture Actions (shown before capture) -->
+          <div class="capture-actions" id="captureActions">
+            <div class="camera-icon-wrap">
+              <span class="camera-icon">◎</span>
+            </div>
+            <button class="btn-capture" id="btnShutter">实时拍摄</button>
+            <div class="action-divider"></div>
+            <label class="btn-gallery-new">
+              <input type="file" id="galleryInput" accept="image/*" style="display:none" />
+              <span class="gallery-icon">⊞</span>
+              <span class="gallery-text">从相册选择</span>
+            </label>
+          </div>
+
+          <!-- Preview Actions (shown after capture) -->
+          <div class="preview-actions" id="previewActions" style="display:none">
+            <button class="btn-retake" id="btnRetake">↺ 重拍</button>
+            <button class="btn-confirm" id="btnConfirm">✓ 确认使用 →</button>
           </div>
         </div>
-        <div class="sampling-controls">
-          <button class="btn-shutter" id="btnShutter">◉ CAPTURE</button>
-          <label class="btn-gallery">
-            <input type="file" id="galleryInput" accept="image/*" style="display:none" />
-            ⊞ GALLERY
-          </label>
-          <button class="btn-retake" id="btnRetake" style="display:none">↺ RETAKE</button>
-          <button class="btn-confirm" id="btnConfirm" style="display:none">✓ CONFIRM →</button>
+
+        <!-- Visual Guide Card -->
+        <div class="sampling-tip">
+          <div class="tip-icon-wrap">💡</div>
+          <div class="tip-text-wrap">
+            <p class="tip-label">提示</p>
+            <p class="tip-content">避开逆光环境，正对光源，取景框对准面部中心。</p>
+          </div>
         </div>
+      </div>
+
+      <!-- Privacy Footer -->
+      <div class="sampling-footer">
+        <div class="privacy-lock">
+          <span class="lock-icon">🔒</span>
+          <span class="privacy-label">Privacy Protected</span>
+        </div>
+        <p class="privacy-text">
+          您的照片仅用于色彩特征计算，不会被存储或分享。点击上传即表示您同意我们的<a href="#" class="privacy-link">隐私权政策</a>。
+        </p>
       </div>
     </div>
   </section>
@@ -201,6 +235,7 @@
         <div class="export-buttons" id="exportButtons" style="display:none">
           <button class="btn-save" id="btnSave">⬇ SAVE TO CAMERA ROLL</button>
           <button class="btn-publish" id="btnPublish">⊳ GO PUBLISH</button>
+          <button class="btn-community-share" id="btnGoCommunity">⊕ SHARE TO COMMUNITY MAP</button>
           <button class="btn-report" id="btnViewReport">□ VIEW ANALYSIS REPORT</button>
         </div>
         <p class="ios-hint" id="iosHint" style="display:none">长按图片即可保存到相册</p>
@@ -238,7 +273,43 @@
     </div>
   </div>
 
+  <!-- ===== PAGE 8: COMMUNITY MAP ===== -->
+  <section id="page-community" class="page">
+    <div class="community-inner">
+      <div id="communityMap" class="community-map"></div>
+      <div class="community-topbar">
+        <button class="community-back-btn" id="btnCommunityBack">&#8592;</button>
+        <span class="community-title">COMMUNITY MAP</span>
+        <span class="community-post-count" id="communityPostCount"></span>
+      </div>
+      <button class="community-fab" id="btnCommunityPost">+</button>
+      <div class="community-sheet" id="communitySheet">
+        <div class="community-sheet-handle"></div>
+        <div class="community-sheet-content" id="communitySheetContent"></div>
+      </div>
+      <div class="community-post-modal" id="communityPostModal">
+        <div class="community-post-modal-inner">
+          <div class="community-post-modal-header">
+            <span>Share to Community</span>
+            <button class="community-modal-close" id="btnPostModalClose">&#10005;</button>
+          </div>
+          <div class="community-post-modal-body">
+            <div class="community-card-preview" id="communityCardPreview"></div>
+            <textarea class="community-quote-input" id="communityQuoteInput" placeholder="One sentence about your season..." maxlength="100"></textarea>
+            <div class="community-location-row">
+              <span class="community-location-label" id="communityLocationLabel">Detecting location...</span>
+              <button class="community-location-btn" id="btnDetectLocation">&#128205;</button>
+            </div>
+          </div>
+          <button class="community-submit-btn" id="btnSubmitPost">PUBLISH TO MAP</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
