@@ -201,12 +201,42 @@
         <div class="export-buttons" id="exportButtons" style="display:none">
           <button class="btn-save" id="btnSave">⬇ SAVE TO CAMERA ROLL</button>
           <button class="btn-publish" id="btnPublish">⊳ GO PUBLISH</button>
+          <button class="btn-report" id="btnViewReport">□ VIEW ANALYSIS REPORT</button>
         </div>
         <p class="ios-hint" id="iosHint" style="display:none">长按图片即可保存到相册</p>
       </div>
       <button class="btn-back" id="btnBackToStory">← BACK</button>
     </div>
   </section>
+
+  <!-- ===== REPORT MODAL ===== -->
+  <div class="report-modal" id="reportModal">
+    <div class="report-modal-backdrop" id="reportBackdrop"></div>
+    <div class="report-modal-content">
+      <div class="report-modal-header">
+        <span class="report-modal-title">AI ANALYSIS REPORT</span>
+        <button class="report-modal-close" id="reportModalClose">✕</button>
+      </div>
+      <div class="report-modal-body" id="reportModalBody">
+        <div class="ai-analysis-section">
+          <div class="report-label">PERSONALITY ANALYSIS</div>
+          <div class="ai-analysis-content" id="modalPersonalityContent"></div>
+        </div>
+        <div class="ai-analysis-section">
+          <div class="report-label">SKIN & COLOUR ANALYSIS</div>
+          <div class="ai-analysis-content" id="modalSkinContent"></div>
+        </div>
+        <div class="ai-analysis-section">
+          <div class="report-label">SEASON DETERMINATION</div>
+          <div class="ai-analysis-content" id="modalSeasonContent"></div>
+        </div>
+        <div class="ai-analysis-section">
+          <div class="report-label">PERSONALIZED STYLING</div>
+          <div class="ai-analysis-content" id="modalStylingContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="app.js"></script>

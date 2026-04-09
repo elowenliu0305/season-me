@@ -48,6 +48,9 @@ const smse = {
         .forEach(k => localStorage.removeItem(k));
     } catch { /* ignore */ }
   },
+  remove(key) {
+    try { localStorage.removeItem('smse_' + key); } catch { /* ignore */ }
+  },
   getUsage() {
     try {
       return Object.keys(localStorage)
@@ -55,6 +58,108 @@ const smse = {
         .reduce((sum, k) => sum + (localStorage.getItem(k) || '').length * 2, 0);
     } catch { return 0; }
   }
+};
+
+/* =========================================================
+   PipelineClient — SSE-based analysis pipeline
+   ========================================================= */
+const PipelineClient = {
+  _running: false,
+  _result: null,
+  _progressCallbacks: [],
+  _doneCallbacks: [],
+  _errorCallbacks: [],
+
+  onProgress(cb) { this._progressCallbacks.push(cb); },
+  onDone(cb) { this._doneCallbacks.push(cb); },
+  onError(cb) { this._errorCallbacks.push(cb); },
+
+  _emit(type, data) {
+    (type === 'progress' ? this._progressCallbacks : type === 'done' ? this._doneCallbacks : this._errorCallbacks)
+      .forEach(cb => { try { cb(data); } catch {} });
+  },
+
+  getCachedResult() {
+    return smse.getJSON('pipelineResult');
+  },
+
+  start() {
+    if (this._running) return;
+    const cached = this.getCachedResult();
+    if (cached) {
+      this._result = cached;
+      setTimeout(() => this._emit('done', cached), 0);
+      return;
+    }
+
+    const photo = smse.get('photo');
+    const body = {
+      quizAnswers: smse.getJSON('quiz') || [],
+      nickname: smse.get('nickname') || '',
+      spirit: smse.get('spirit') || '',
+      image: photo || '',
+    };
+
+    this._running = true;
+    fetch('/api/pipeline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(response => {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      function processChunk(chunk) {
+        buffer += chunk;
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        let event = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            event = line.slice(7);
+          } else if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            if (event === 'progress') PipelineClient._emit('progress', data);
+            else if (event === 'step_result') PipelineClient._stepResults = PipelineClient._stepResults || {};
+            else if (event === 'done') {
+              PipelineClient._result = data;
+              PipelineClient._running = false;
+              smse.setJSON('pipelineResult', data);
+              PipelineClient._emit('done', data);
+            } else if (event === 'error') {
+              PipelineClient._running = false;
+              PipelineClient._emit('error', data);
+            }
+            event = '';
+          }
+        }
+      }
+
+      function pump() {
+        return reader.read().then(({ done, value }) => {
+          if (done) { PipelineClient._running = false; return; }
+          processChunk(decoder.decode(value, { stream: true }));
+          return pump();
+        });
+      }
+
+      return pump();
+    }).catch(err => {
+      this._running = false;
+      this._emit('error', { error: err.message });
+    });
+  },
+
+  getResult() { return this._result; },
+  isRunning() { return this._running; },
+  reset() {
+    this._running = false;
+    this._result = null;
+    this._stepResults = null;
+    smse.remove('pipelineResult');
+  },
 };
 
 /* =========================================================
@@ -791,6 +896,7 @@ function processAndSavePhoto(dataUrl, quality = 0.7) {
     if (kb > 3072) {
       showToast('照片较大，可能占用较多存储空间');
     }
+    PipelineClient.reset();
     smse.set('photo', result);
     stopCamera();
     showPage('darkroom');
@@ -807,32 +913,25 @@ function initDarkroomPage() {
   output.textContent = '';
   complete.classList.remove('visible');
 
-  const messages = [
-    'DEVELOPING YOUR DNA...',
-    'READING COLOUR SPECTRUM...',
-    'MAPPING YOUR SEASON...'
+  // TODO: 删除假数据跳转，恢复 PipelineClient.start() 真实逻辑
+  const mockMessages = [
+    '分析你的审美密码...',
+    '读取你的色彩信息...',
+    '锁定你的色彩季相...',
+    '为你定制穿搭方案...',
   ];
 
-  // 6.5 Start calculation immediately in background
-  const calcPromise = SeasonEngine.calculate();
-  const minWait = new Promise(r => setTimeout(r, 3000));
-
-  // 6.2–6.3 Typewriter sequence
-  async function typeSequence() {
-    for (const msg of messages) {
+  (async () => {
+    for (const msg of mockMessages) {
       await typewriter(msg, output, 55);
       await delay(500);
       output.textContent += '\n';
     }
-    // 6.4 Fade in ANALYSIS COMPLETE
-    await Promise.all([calcPromise, minWait]);
     complete.classList.add('visible');
     await delay(900);
     trackEvent('QuizCompleted');
     showPage('story');
-  }
-
-  typeSequence();
+  })();
 }
 
 function typewriter(text, el, speed = 60) {
@@ -850,135 +949,8 @@ function typewriter(text, el, speed = 60) {
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 /* =========================================================
-   7. SEASON ENGINE (tasks 7.1–7.6)
+   SEASON META (static display data)
    ========================================================= */
-const SeasonEngine = {
-  // 7.1 sRGB → Linear → XYZ → Lab
-  srgbToLinear(c) {
-    c /= 255;
-    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  },
-  linearToXyz(r, g, b) {
-    // D65 matrix
-    return {
-      x: r*0.4124564 + g*0.3575761 + b*0.1804375,
-      y: r*0.2126729 + g*0.7151522 + b*0.0721750,
-      z: r*0.0193339 + g*0.1191920 + b*0.9503041
-    };
-  },
-  xyzToLab(x, y, z) {
-    const Xn=0.95047, Yn=1.00000, Zn=1.08883;
-    const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787*t + 16/116;
-    const fx=f(x/Xn), fy=f(y/Yn), fz=f(z/Zn);
-    return { L: 116*fy-16, a: 500*(fx-fy), b: 200*(fy-fz) };
-  },
-  rgbToLab(r, g, b) {
-    const lr = this.srgbToLinear(r);
-    const lg = this.srgbToLinear(g);
-    const lb = this.srgbToLinear(b);
-    const xyz = this.linearToXyz(lr, lg, lb);
-    return this.xyzToLab(xyz.x, xyz.y, xyz.z);
-  },
-
-  // 7.2 Sample Lab from photo base64
-  sampleLabFromPhoto(base64) {
-    return new Promise(resolve => {
-      if (!base64) { resolve(null); return; }
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width; canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const cx = Math.floor(img.width / 2);
-        const cy = Math.floor(img.height / 2);
-        const sampleSize = 60;
-        const sx = Math.max(0, cx - sampleSize / 2);
-        const sy = Math.max(0, cy - sampleSize / 2);
-        const data = ctx.getImageData(sx, sy, sampleSize, sampleSize).data;
-        let sumR=0, sumG=0, sumB=0;
-        const pixels = data.length / 4;
-        for (let i = 0; i < data.length; i += 4) {
-          sumR += data[i]; sumG += data[i+1]; sumB += data[i+2];
-        }
-        resolve(this.rgbToLab(sumR/pixels, sumG/pixels, sumB/pixels));
-      };
-      img.onerror = () => resolve(null);
-      img.src = base64;
-    });
-  },
-
-  // 7.3 Dimension scoring
-  calcDimensions(answers) {
-    const dims = { E: 0, O: 0, T: 0, X: 0 };
-    const counts = { E: 0, O: 0, T: 0, X: 0 };
-    answers.forEach((ans, qi) => {
-      const d = QUIZ_DATA[qi].dims[ans];
-      Object.entries(d).forEach(([k, v]) => {
-        dims[k] = (dims[k] || 0) + v;
-        counts[k] = (counts[k] || 0) + 1;
-      });
-    });
-    // Normalize to 0–1
-    const result = {};
-    ['E','O','T','X'].forEach(k => {
-      const raw = counts[k] > 0 ? dims[k] / counts[k] : 0;
-      result[k] = (raw + 1) / 2; // map -1..1 → 0..1
-    });
-    return result;
-  },
-
-  // 7.4 Map to season
-  mapToSeason(lab, dims) {
-    // Lab guidance: warm=a>5+b>10, cool=a<0
-    // bright=L>65, deep=L<50
-    const warm = lab ? (lab.a > 4 || lab.b > 8) : dims.T > 0.55;
-    const cool = lab ? (lab.a < 0 && lab.b < 5) : dims.T < 0.45;
-    const bright = lab ? lab.L > 65 : dims.E > 0.6;
-    const deep   = lab ? lab.L < 50 : dims.E < 0.35;
-
-    const highE = dims.E > 0.6;
-    const highT = dims.T > 0.55;
-
-    if (warm && bright && highE)  return 'bright-spring';
-    if (warm && bright)           return 'warm-spring';
-    if (!deep && !bright && !warm && !cool) return 'light-spring';
-
-    if (cool && bright)           return 'light-summer';
-    if (cool && !deep)            return 'cool-summer';
-    if (!warm && !bright && !deep)return 'soft-summer';
-
-    if (warm && deep && highE)    return 'deep-autumn';
-    if (warm && deep)             return 'warm-autumn';
-    if (warm && !bright)          return 'soft-autumn';
-
-    if (cool && deep && highE)    return 'bright-winter';
-    if (cool && deep)             return 'cool-winter';
-    return 'deep-winter';
-  },
-
-  // 7.5 Main calculate
-  async calculate() {
-    const photo = smse.get('photo');
-    const answers = smse.getJSON('quiz') || [];
-    const dims = this.calcDimensions(answers);
-
-    let season;
-    if (photo) {
-      const lab = await this.sampleLabFromPhoto(photo);
-      // Weight 0.4 Lab + 0.6 dims — apply by biasing thresholds
-      season = this.mapToSeason(lab, dims);
-    } else {
-      season = this.mapToSeason(null, dims);
-    }
-
-    smse.set('season', season);
-    ThemeManager.apply(season);
-    return season;
-  }
-};
-
-/* 7.6 Season metadata */
 const SEASON_META = {
   'bright-spring': {
     zh: '明亮春', en: 'BRIGHT SPRING',
@@ -1043,24 +1015,105 @@ const SEASON_META = {
 };
 
 /* =========================================================
-   PAGE 6 · FEATURE STORY (tasks 8.1–8.7)
+   PAGE 6 · FEATURE STORY
    ========================================================= */
+const MOCK_PIPELINE_RESULT = {
+  season: 'cool-summer',
+  personality: {
+    personalityType: '清冷智性',
+    coreTraits: ['独立思考', '极简主义', '审美挑剔', '内敛沉稳'],
+    innerWorld: '你的内心像一座精心布置的美术馆——每件物品都有自己的位置，每段关系都经过审慎筛选。你不需要被理解，但渴望被尊重。简约不是你的风格，而是你的信仰。',
+    strengths: '你对"恰到好处"的把握力远超常人。',
+    extroversion: 'low',
+    warmth: 'medium',
+    styleDNA: [
+      { trait: '克制美学', description: '偏好留白与呼吸感，拒绝过度装饰' },
+      { trait: '材质敏感', description: '对触感和质感有极高要求' },
+      { trait: '静谧力量', description: '不张扬却令人无法忽视的气场' },
+    ],
+  },
+  faceReport: {
+    hairColor: '深棕',
+    eyeColor: '深棕',
+    skinBaseTone: '偏冷',
+    skinDepth: '偏浅',
+    skinValue: '中',
+    contrastLevel: '低对比',
+    contrastResponse: '中明度色彩最和谐，过高明度显得浮夸，过低则沉闷',
+    temperatureResponse: '冷色系更提气，暖色系让肤色略显黄气',
+    suggestedTemperature: '冷色系',
+    facialFeatures: '轮廓线条清晰，气质干净利落，自带一种疏离的高级感',
+    avoidColors: ['亮橘色', '芥末黄', '铁锈红'],
+  },
+  seasonReasoning: {
+    season: 'cool-summer',
+    reasoning: '冷色调底色 + 低对比度 + 中性明度，与冷夏季相的莫兰迪美学高度契合。性格上清冷内敛的风格进一步确认了这一判断。',
+    confidence: 'high',
+    candidates: ['cool-summer', 'soft-summer'],
+  },
+  styling: {
+    summary: '冷调克制 × 静谧力量 = 毫不费力的智性美',
+    recommendations: [
+      {
+        scene: '职场通勤',
+        pieces: ['藏青西装外套', '真丝白衬衫', '银灰阔腿裤'],
+        colorScheme: { primary: '藏青', secondary: '珍珠白', accent: '银灰' },
+        tip: '用同色系层次感代替撞色——藏青+深灰+银灰，层次分明又不争不抢。',
+        why: '冷色系放大你天生的智性气场，真丝材质与你的审美敏感度完美呼应。',
+      },
+      {
+        scene: '周末约会',
+        pieces: ['灰粉针织连衣裙', '裸粉羊绒围巾', '白金极简耳饰'],
+        colorScheme: { primary: '灰粉', secondary: '裸粉', accent: '白金' },
+        tip: '约会穿搭的关键是"看起来没怎么打扮却恰到好处"——灰粉是冷夏的秘密武器。',
+        why: '低饱和暖粉平衡了你气质中的冷感，多一分温柔却不失你的清冷底色。',
+      },
+      {
+        scene: '日常休闲',
+        pieces: ['石灰色棉质T恤', '薰衣草灰直筒裤', '帆布小白鞋'],
+        colorScheme: { primary: '石灰色', secondary: '薰衣草灰', accent: '纯白' },
+        tip: '把你的衣柜想象成蒙德里安的画——灰、白、淡紫，几何般精确又呼吸感十足。',
+        why: '你是那种穿基础款就赢的人，关键是颜色的选择必须严格在冷色调范围内。',
+      },
+      {
+        scene: '正式场合',
+        pieces: ['冰蓝丝绒吊带裙', '银色细跟高跟鞋', '珍珠极简手链'],
+        colorScheme: { primary: '冰蓝', secondary: '珍珠白', accent: '银' },
+        tip: '正式场合大胆用冷色高饱和——冰蓝、粉紫、钢灰，你是少数能驾驭这些颜色的人。',
+        why: '冷色高饱和在你身上不是张扬，而是精准的优雅。你的肤色让这些颜色成为你的武器。',
+      },
+    ],
+    colorGuide: {
+      bestColors: ['冰蓝', '藏青', '灰粉', '薰衣草', '珍珠白', '钢灰'],
+      goodColors: ['雾霾蓝', '玫瑰灰', '裸粉', '银灰', '薄荷灰'],
+      cautionColors: ['亮橘', '芥末黄', '铁锈红', '军绿', '焦糖'],
+    },
+    signatureLook: '你不需要logo和图案——单色层次穿搭是你的签名。灰+白+一抹冷色，就是你的制服。极简到极致就是你的奢侈。',
+  },
+};
+
 function initStoryPage() {
-  const season = smse.get('season') || 'cool-summer';
+  // TODO: 删除假数据，恢复真实逻辑
+  // const result = PipelineClient.getResult() || PipelineClient.getCachedResult();
+  const result = MOCK_PIPELINE_RESULT;
+  const season = (result && result.season) || smse.get('season') || 'cool-summer';
+
+  // Apply theme and save season
+  smse.set('season', season);
   ThemeManager.apply(season);
 
   const meta = SEASON_META[season] || SEASON_META['cool-summer'];
   const theme = ThemeManager.THEMES[season] || ThemeManager.THEMES['cool-summer'];
 
-  // 8.2 Title
+  // Title
   document.getElementById('seasonTitle').textContent = meta.zh;
   document.getElementById('seasonSubtitle').textContent = meta.en;
 
-  // 8.4 Watermark
+  // Watermark
   const kwText = (meta.keywords[0] + '  ').repeat(30);
   document.getElementById('nameCardWatermark').textContent = kwText;
 
-  // 8.3 Avatar
+  // Avatar
   const avatarEl = document.getElementById('nameCardAvatar');
   const savedAvatar = smse.get('avatar');
   const savedSpirit = smse.get('spirit') || 'swan';
@@ -1074,22 +1127,129 @@ function initStoryPage() {
   // Nickname
   document.getElementById('nameCardNickname').textContent = smse.get('nickname') || 'MYSTIC';
 
-  // 8.5 Copy
+  // Copy
   document.getElementById('reportCopy').textContent = meta.copy;
 
-  // 8.6 Palette collage
+  // Palette collage
   buildPaletteCollage('paletteCollage', theme, false);
 
-  // 8.7 Buttons
+  // Buttons
   document.getElementById('btnGoShare').onclick = () => {
     trackEvent('ShareCardGenerated');
     showPage('export');
   };
   document.getElementById('btnRestart').onclick = () => {
     smse.clear();
+    PipelineClient.reset();
     ThemeManager.apply('cool-summer');
     showPage('cover', 'backward');
   };
+}
+
+function animateIn(el) {
+  el.animate([
+    { opacity: 0, transform: 'translateY(20px)' },
+    { opacity: 1, transform: 'translateY(0)' },
+  ], { duration: 600, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+}
+
+const SKELETON = '<div class="ai-skeleton"><div class="ai-skeleton-line"></div><div class="ai-skeleton-line short"></div></div>';
+
+function renderPersonalityReport(a) {
+  if (!a) return '';
+  const traitsHtml = (a.coreTraits || []).map(t => `<span class="ai-badge">${t}</span>`).join('');
+  const innerHtml = a.innerWorld ? `<p class="ai-report-text">${a.innerWorld}</p>` : '';
+  const strengthHtml = a.strengths ? `<p class="ai-features">${a.strengths}</p>` : '';
+  const dnaHtml = (a.styleDNA || []).map(d => `
+    <div class="ai-advice-card">
+      <span class="ai-advice-category">${d.trait}</span>
+      <p class="ai-advice-content">${d.description}</p>
+    </div>
+  `).join('');
+  return (a.personalityType ? `<div class="ai-section-title">${a.personalityType}</div>` : '')
+    + (traitsHtml ? `<div class="ai-skin-tone">${traitsHtml}</div>` : '')
+    + innerHtml + strengthHtml + dnaHtml;
+}
+
+function renderFaceReport(f) {
+  if (!f) return '';
+  const badges = [
+    f.hairColor && `发色 ${f.hairColor}`,
+    f.eyeColor && `瞳色 ${f.eyeColor}`,
+    f.skinBaseTone && `底色 ${f.skinBaseTone}`,
+    f.skinDepth && `深浅 ${f.skinDepth}`,
+    f.contrastLevel && `对比 ${f.contrastLevel}`,
+  ].filter(Boolean).map(t => `<span class="ai-badge">${t}</span>`).join('');
+  const featuresHtml = f.facialFeatures ? `<p class="ai-features">${f.facialFeatures}</p>` : '';
+  const contrastHtml = f.contrastResponse ? `<p class="ai-report-text"><strong>明度测试：</strong>${f.contrastResponse}</p>` : '';
+  const tempHtml = f.temperatureResponse ? `<p class="ai-report-text"><strong>色温测试：</strong>${f.temperatureResponse}</p>` : '';
+  const avoidHtml = f.avoidColors && f.avoidColors.length
+    ? `<div class="ai-avoid"><span class="ai-avoid-label">LESS IDEAL:</span> ${f.avoidColors.join(' / ')}</div>` : '';
+  return (badges ? `<div class="ai-skin-tone">${badges}</div>` : '')
+    + featuresHtml + contrastHtml + tempHtml + avoidHtml;
+}
+
+function renderSeasonReasoning(r) {
+  if (!r) return '';
+  const confidenceHtml = r.confidence ? `<span class="ai-badge">置信度 ${r.confidence}</span>` : '';
+  const candidateHtml = r.candidates && r.candidates.length
+    ? `<p class="ai-features">候选季相：${r.candidates.join(' → ')}</p>` : '';
+  const reasoningHtml = r.reasoning ? `<p class="ai-report-text">${r.reasoning}</p>` : '';
+  return confidenceHtml + candidateHtml + reasoningHtml;
+}
+
+function renderStyling(s) {
+  if (!s) return '';
+  const summaryHtml = s.summary ? `<p class="ai-features">${s.summary}</p>` : '';
+  const recsHtml = (s.recommendations || []).map(r => `
+    <div class="ai-styling-card">
+      <div class="ai-styling-scene">${r.scene}</div>
+      <div class="ai-styling-pieces">${(r.pieces || []).join(' / ')}</div>
+      <div class="ai-styling-colors">
+        ${r.colorScheme ? `<span class="ai-badge">主色 ${r.colorScheme.primary}</span>
+        <span class="ai-badge">辅色 ${r.colorScheme.secondary}</span>
+        <span class="ai-badge">点缀 ${r.colorScheme.accent}</span>` : ''}
+      </div>
+      ${r.tip ? `<p class="ai-report-text">${r.tip}</p>` : ''}
+      ${r.why ? `<p class="ai-features">${r.why}</p>` : ''}
+    </div>
+  `).join('');
+  const colorGuideHtml = s.colorGuide ? `
+    <div class="ai-color-guide">
+      <div class="ai-color-guide-row best">${(s.colorGuide.bestColors || []).map(c => `<span class="ai-badge best">${c}</span>`).join('')}</div>
+      <div class="ai-color-guide-row good">${(s.colorGuide.goodColors || []).map(c => `<span class="ai-badge">${c}</span>`).join('')}</div>
+      <div class="ai-color-guide-row caution">${(s.colorGuide.cautionColors || []).map(c => `<span class="ai-badge caution">${c}</span>`).join('')}</div>
+    </div>
+  ` : '';
+  const sigHtml = s.signatureLook ? `<p class="ai-report-text">${s.signatureLook}</p>` : '';
+  return summaryHtml + recsHtml + colorGuideHtml + sigHtml;
+}
+
+function initAIReports(result) {
+  if (!result) {
+    result = PipelineClient.getCachedResult();
+  }
+
+  const sections = [
+    { id: 'aiPersonalitySection', contentId: 'aiPersonalityContent', data: result && result.personality, render: renderPersonalityReport },
+    { id: 'aiSkinSection', contentId: 'aiSkinContent', data: result && result.faceReport, render: renderFaceReport },
+    { id: 'aiSeasonSection', contentId: 'aiSeasonContent', data: result && result.seasonReasoning, render: renderSeasonReasoning },
+    { id: 'aiStylingSection', contentId: 'aiStylingContent', data: result && result.styling, render: renderStyling },
+  ];
+
+  sections.forEach(({ id, contentId, data, render }) => {
+    const section = document.getElementById(id);
+    const content = document.getElementById(contentId);
+    if (!section || !content) return;
+
+    if (data) {
+      section.style.display = 'block';
+      content.innerHTML = render(data);
+      animateIn(section);
+    } else {
+      section.style.display = 'none';
+    }
+  });
 }
 
 function buildPaletteCollage(containerId, theme, small = false) {
@@ -1104,6 +1264,31 @@ function buildPaletteCollage(containerId, theme, small = false) {
     sw.style.transform = `rotate(${deg}deg)`;
     el.appendChild(sw);
   }
+}
+
+/* =========================================================
+   REPORT MODAL
+   ========================================================= */
+function openReportModal() {
+  const result = MOCK_PIPELINE_RESULT;
+  // TODO: 替换为 const result = PipelineClient.getResult() || PipelineClient.getCachedResult();
+
+  const modal = document.getElementById('reportModal');
+  if (!result) return;
+
+  document.getElementById('modalPersonalityContent').innerHTML = renderPersonalityReport(result.personality);
+  document.getElementById('modalSkinContent').innerHTML = renderFaceReport(result.faceReport);
+  document.getElementById('modalSeasonContent').innerHTML = renderSeasonReasoning(result.seasonReasoning);
+  document.getElementById('modalStylingContent').innerHTML = renderStyling(result.styling);
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeReportModal() {
+  const modal = document.getElementById('reportModal');
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
 }
 
 /* =========================================================
@@ -1137,6 +1322,11 @@ function initExportPage() {
 
   // Back button
   document.getElementById('btnBackToStory').onclick = () => showPage('story', 'backward');
+
+  // View report modal
+  document.getElementById('btnViewReport').onclick = openReportModal;
+  document.getElementById('reportModalClose').onclick = closeReportModal;
+  document.getElementById('reportBackdrop').onclick = closeReportModal;
 
   // 9.6 Show loading, generate image
   document.getElementById('exportLoading').style.display = 'flex';

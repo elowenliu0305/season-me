@@ -890,6 +890,182 @@ html, body {
   font-style: italic;
 }
 
+/* =========================================================
+   AI ANALYSIS REPORT
+   ========================================================= */
+.ai-analysis-section {
+  padding: 1.5rem 1.25rem 0;
+}
+
+.ai-section-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.02em;
+}
+
+.ai-skin-tone {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.ai-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
+  background: var(--text-main);
+  color: var(--base-bg);
+  opacity: 0.85;
+}
+
+.ai-features {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 0.6rem;
+}
+
+.ai-report-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-main);
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+
+.ai-advice-card {
+  background: rgba(128, 128, 128, 0.08);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+[data-theme="dark"] .ai-advice-card {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ai-advice-category {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: var(--accent-color);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.ai-advice-content {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.ai-avoid {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--text-main);
+  opacity: 0.15;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.ai-avoid-label {
+  font-weight: 700;
+}
+
+/* Skeleton loader */
+.ai-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+}
+
+.ai-skeleton-line {
+  height: 14px;
+  background: linear-gradient(90deg, var(--text-main) 25%, transparent 50%, var(--text-main) 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  opacity: 0.08;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+.ai-skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Styling recommendation cards */
+.ai-styling-card {
+  background: var(--text-main);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.04;
+}
+
+.ai-styling-scene {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-color);
+  margin-bottom: 0.4rem;
+}
+
+.ai-styling-pieces {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+  opacity: 0.95;
+}
+
+.ai-styling-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.4rem;
+}
+
+/* Color guide */
+.ai-color-guide {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ai-color-guide-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ai-badge.best {
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+}
+
+.ai-badge.caution {
+  opacity: 0.5;
+}
+
 /* Palette collage */
 .palette-collage {
   display: flex;
@@ -1205,6 +1381,109 @@ html, body {
     font-size: 1.2rem;
   }
 }
+
+/* ---------- Report Modal ---------- */
+.report-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 9999;
+  display: none;
+}
+
+.report-modal.active {
+  display: block;
+}
+
+.report-modal-backdrop {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.report-modal-content {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%;
+  max-height: 92vh;
+  background: var(--base-bg);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.report-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--text-main);
+  opacity: 0.15;
+  flex-shrink: 0;
+}
+
+.report-modal-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-main);
+}
+
+.report-modal-close {
+  width: 32px; height: 32px;
+  border: 1.5px solid var(--text-main);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  -webkit-appearance: none;
+}
+
+.report-modal-close:active {
+  opacity: 0.6;
+}
+
+.report-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2rem;
+}
+
+.btn-report {
+  width: 100%;
+  padding: 1rem;
+  background: transparent;
+  color: var(--text-main);
+  border: 2px solid var(--text-main);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: opacity 0.2s;
+}
+
+.btn-report:active { opacity: 0.7; }
+
+[data-theme="dark"] .btn-report { color: #E8E8E8; border-color: #E8E8E8; }
 
 /* Phones with very short height (landscape-ish) */
 @media (max-height: 650px) {
