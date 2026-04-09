@@ -314,7 +314,7 @@ async function step4Styling(season, personality) {
   const content = await callOpenRouter([
     { role: 'system', content: STYLING_SYSTEM },
     { role: 'user', content: userPrompt },
-  ], 'anthropic/claude-sonnet-4-20250514');
+  ], 'anthropic/claude-sonnet-4');
 
   return parseJSON(content);
 }
