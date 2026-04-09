@@ -2036,6 +2036,27 @@ html, body {
 
 .community-like-btn:active { transform: scale(0.94); }
 
+.community-dislike-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  background: none;
+  border: 1.5px solid var(--text-main);
+  color: var(--text-main);
+  padding: 0.4rem 0.85rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: all 0.2s;
+}
+
+.community-dislike-btn.disliked {
+  background: #FF6B6B;
+  color: #fff;
+  border-color: #FF6B6B;
+}
+
+.community-dislike-btn:active { transform: scale(0.94); }
+
 /* Cover page — community button + start area wrapper */
 .cover-start-area {
   grid-area: start;
@@ -2073,8 +2094,8 @@ html, body {
 .community-marker-wrapper { background: none !important; border: none !important; }
 
 .community-marker {
-  width: 48px; height: 48px;
-  border-radius: 50%;
+  width: 44px; height: 58px;
+  border-radius: 6px;
   overflow: hidden;
   border: 2px solid #fff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);

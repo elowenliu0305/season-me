@@ -1410,6 +1410,7 @@ let communityMap = null;
 let communityMarkers = null;
 let communityPosts = [];
 let userLocation = null;
+let currentSheetPost = null;
 
 function initCommunityPage() {
   const sb = getSupabase();
@@ -1495,8 +1496,8 @@ function renderMapMarkers() {
     const icon = L.divIcon({
       className: 'community-marker-wrapper',
       html: '<div class="community-marker"><img src="' + post.card_image_url + '" alt="' + escapeAttr(post.nickname) + '" onerror="this.parentElement.innerHTML=\'' + fallbackHtml.replace(/'/g, "\\'") + '\'" /></div>',
-      iconSize: [48, 48],
-      iconAnchor: [24, 24],
+      iconSize: [44, 58],
+      iconAnchor: [22, 29],
     });
 
     const marker = L.marker([post.latitude, post.longitude], { icon })
@@ -1526,10 +1527,12 @@ function escapeHtml(str) {
 }
 
 function openCommunitySheet(post) {
+  currentSheetPost = post.id;
   const sheet = document.getElementById('communitySheet');
   const content = document.getElementById('communitySheetContent');
 
   const liked = isPostLikedByUser(post.id);
+  const disliked = isPostDislikedByUser(post.id);
   const spiritEmoji = getSpiritEmojiHtml(post.spirit);
   const seasonLabel = SEASON_META[post.season] ? SEASON_META[post.season].en : post.season;
 
@@ -1547,9 +1550,14 @@ function openCommunitySheet(post) {
       '</div>' +
     '</div>' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.85rem;padding-top:0.65rem;border-top:1px solid rgba(0,0,0,0.08)">' +
-      '<button class="community-like-btn ' + (liked ? 'liked' : '') + '" onclick="toggleLike(\'' + post.id + '\')">' +
-        (liked ? '\u2665' : '\u2661') + ' ' + post.likes_count +
-      '</button>' +
+      '<div style="display:flex;gap:0.5rem">' +
+        '<button class="community-like-btn ' + (liked ? 'liked' : '') + '" onclick="toggleLike(\'' + post.id + '\')">' +
+          (liked ? '\u2665' : '\u2661') + ' ' + post.likes_count +
+        '</button>' +
+        '<button class="community-dislike-btn ' + (disliked ? 'disliked' : '') + '" onclick="toggleDislike(\'' + post.id + '\')">' +
+          (disliked ? '\uD83E\uDD12' : '\uD83D\uDC4E') + ' ' + (post.dislikes_count || 0) +
+        '</button>' +
+      '</div>' +
       '<span style="font-family:Space Mono,monospace;font-size:0.5rem;color:var(--text-secondary)">' + formatTimeAgo(post.created_at) + '</span>' +
     '</div>';
 
@@ -1557,6 +1565,7 @@ function openCommunitySheet(post) {
 }
 
 function closeCommunitySheet() {
+  currentSheetPost = null;
   document.getElementById('communitySheet').classList.remove('open');
 }
 
@@ -1565,38 +1574,85 @@ function isPostLikedByUser(postId) {
   return liked.includes(postId);
 }
 
+function isPostDislikedByUser(postId) {
+  const disliked = smse.getJSON('communityDislikes') || [];
+  return disliked.includes(postId);
+}
+
 async function toggleLike(postId) {
   const sb = getSupabase();
   if (!sb) return;
 
   const sessionId = getSessionId();
   const alreadyLiked = isPostLikedByUser(postId);
+  const alreadyDisliked = isPostDislikedByUser(postId);
 
   try {
     if (alreadyLiked) {
       await sb.from('community_likes').delete().match({ post_id: postId, session_id: sessionId });
       await sb.rpc('decrement_likes', { post_id_input: postId });
+      smse.setJSON('communityLikes', (smse.getJSON('communityLikes') || []).filter(id => id !== postId));
     } else {
+      if (alreadyDisliked) {
+        await sb.from('community_dislikes').delete().match({ post_id: postId, session_id: sessionId });
+        await sb.rpc('decrement_dislikes', { post_id_input: postId });
+        smse.setJSON('communityDislikes', (smse.getJSON('communityDislikes') || []).filter(id => id !== postId));
+      }
       await sb.from('community_likes').insert({ post_id: postId, session_id: sessionId });
       await sb.rpc('increment_likes', { post_id_input: postId });
-    }
-
-    const liked = (smse.getJSON('communityLikes') || []);
-    if (alreadyLiked) {
-      smse.setJSON('communityLikes', liked.filter(id => id !== postId));
-    } else {
+      const liked = smse.getJSON('communityLikes') || [];
       liked.push(postId);
       smse.setJSON('communityLikes', liked);
     }
 
-    await loadCommunityPosts();
+    await refreshSheetAndMarkers(postId);
   } catch (err) {
     console.error('Toggle like failed:', err);
   }
 }
 
-// Make toggleLike globally accessible for onclick
+async function toggleDislike(postId) {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const sessionId = getSessionId();
+  const alreadyDisliked = isPostDislikedByUser(postId);
+  const alreadyLiked = isPostLikedByUser(postId);
+
+  try {
+    if (alreadyDisliked) {
+      await sb.from('community_dislikes').delete().match({ post_id: postId, session_id: sessionId });
+      await sb.rpc('decrement_dislikes', { post_id_input: postId });
+      smse.setJSON('communityDislikes', (smse.getJSON('communityDislikes') || []).filter(id => id !== postId));
+    } else {
+      if (alreadyLiked) {
+        await sb.from('community_likes').delete().match({ post_id: postId, session_id: sessionId });
+        await sb.rpc('decrement_likes', { post_id_input: postId });
+        smse.setJSON('communityLikes', (smse.getJSON('communityLikes') || []).filter(id => id !== postId));
+      }
+      await sb.from('community_dislikes').insert({ post_id: postId, session_id: sessionId });
+      await sb.rpc('increment_dislikes', { post_id_input: postId });
+      const disliked = smse.getJSON('communityDislikes') || [];
+      disliked.push(postId);
+      smse.setJSON('communityDislikes', disliked);
+    }
+
+    await refreshSheetAndMarkers(postId);
+  } catch (err) {
+    console.error('Toggle dislike failed:', err);
+  }
+}
+
+async function refreshSheetAndMarkers(postId) {
+  await loadCommunityPosts();
+  if (currentSheetPost === postId) {
+    const post = communityPosts.find(p => p.id === postId);
+    if (post) openCommunitySheet(post);
+  }
+}
+
 window.toggleLike = toggleLike;
+window.toggleDislike = toggleDislike;
 
 function formatTimeAgo(isoString) {
   const diff = Date.now() - new Date(isoString).getTime();
@@ -1768,11 +1824,26 @@ async function submitPost() {
   submitBtn.textContent = 'PUBLISHING...';
 
   try {
-    // Step 1: Upload image via API
-    const formData = new FormData();
-    formData.append('file', shareImageBlob, getSessionId() + '_' + Date.now() + '.png');
+    // Step 1: Upload image via API (base64)
+    const reader = new FileReader();
+    const base64Promise = new Promise((resolve) => {
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.readAsDataURL(shareImageBlob);
+    });
+    const base64Data = await base64Promise;
 
-    const uploadResp = await fetch('/api/upload-card', { method: 'POST', body: formData });
+    const uploadResp = await fetch('/api/upload-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        data: base64Data,
+        mimeType: 'image/png',
+        fileName: getSessionId() + '_' + Date.now() + '.png',
+      }),
+    });
     if (!uploadResp.ok) throw new Error('Image upload failed');
     const { url: cardImageUrl } = await uploadResp.json();
 

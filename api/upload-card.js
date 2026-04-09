@@ -11,12 +11,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const formData = await req.formData();
-    const file = formData.get('file');
-    if (!file) return res.status(400).json({ ok: false, error: 'No file' });
+    const { data, mimeType, fileName } = req.body;
+    if (!data) return res.status(400).json({ ok: false, error: 'No data' });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split('.').pop() || 'png';
+    const buffer = Buffer.from(data, 'base64');
+    const ext = (fileName || 'image').split('.').pop() || 'png';
     const storagePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
     const uploadResp = await fetch(
@@ -24,7 +23,7 @@ export default async function handler(req, res) {
       {
         method: 'POST',
         headers: {
-          'Content-Type': file.type || 'image/png',
+          'Content-Type': mimeType || 'image/png',
           Authorization: `Bearer ${SERVICE_KEY}`,
         },
         body: buffer,
