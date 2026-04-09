@@ -123,6 +123,9 @@ const PipelineClient = {
             const data = JSON.parse(line.slice(6));
             if (event === 'progress') PipelineClient._emit('progress', data);
             else if (event === 'step_result') PipelineClient._stepResults = PipelineClient._stepResults || {};
+            else if (event === 'step_error') {
+              console.warn('Pipeline step error:', data);
+            }
             else if (event === 'done') {
               PipelineClient._result = data;
               PipelineClient._running = false;
@@ -913,25 +916,29 @@ function initDarkroomPage() {
   output.textContent = '';
   complete.classList.remove('visible');
 
-  // TODO: 删除假数据跳转，恢复 PipelineClient.start() 真实逻辑
-  const mockMessages = [
-    '分析你的审美密码...',
-    '读取你的色彩信息...',
-    '锁定你的色彩季相...',
-    '为你定制穿搭方案...',
-  ];
+  PipelineClient.reset();
 
-  (async () => {
-    for (const msg of mockMessages) {
-      await typewriter(msg, output, 55);
-      await delay(500);
-      output.textContent += '\n';
-    }
+  PipelineClient.onProgress(({ step, message }) => {
+    if (step > 1) output.textContent += '\n';
+    typewriter(message, output, 55);
+  });
+
+  PipelineClient.onDone((result) => {
+    setTimeout(() => {
+      complete.classList.add('visible');
+      setTimeout(() => {
+        trackEvent('QuizCompleted');
+        showPage('story');
+      }, 900);
+    }, 500);
+  });
+
+  PipelineClient.onError(({ error }) => {
     complete.classList.add('visible');
-    await delay(900);
-    trackEvent('QuizCompleted');
-    showPage('story');
-  })();
+    setTimeout(() => showPage('story'), 900);
+  });
+
+  PipelineClient.start();
 }
 
 function typewriter(text, el, speed = 60) {
@@ -1017,85 +1024,8 @@ const SEASON_META = {
 /* =========================================================
    PAGE 6 · FEATURE STORY
    ========================================================= */
-const MOCK_PIPELINE_RESULT = {
-  season: 'cool-summer',
-  personality: {
-    personalityType: '清冷智性',
-    coreTraits: ['独立思考', '极简主义', '审美挑剔', '内敛沉稳'],
-    innerWorld: '你的内心像一座精心布置的美术馆——每件物品都有自己的位置，每段关系都经过审慎筛选。你不需要被理解，但渴望被尊重。简约不是你的风格，而是你的信仰。',
-    strengths: '你对"恰到好处"的把握力远超常人。',
-    extroversion: 'low',
-    warmth: 'medium',
-    styleDNA: [
-      { trait: '克制美学', description: '偏好留白与呼吸感，拒绝过度装饰' },
-      { trait: '材质敏感', description: '对触感和质感有极高要求' },
-      { trait: '静谧力量', description: '不张扬却令人无法忽视的气场' },
-    ],
-  },
-  faceReport: {
-    hairColor: '深棕',
-    eyeColor: '深棕',
-    skinBaseTone: '偏冷',
-    skinDepth: '偏浅',
-    skinValue: '中',
-    contrastLevel: '低对比',
-    contrastResponse: '中明度色彩最和谐，过高明度显得浮夸，过低则沉闷',
-    temperatureResponse: '冷色系更提气，暖色系让肤色略显黄气',
-    suggestedTemperature: '冷色系',
-    facialFeatures: '轮廓线条清晰，气质干净利落，自带一种疏离的高级感',
-    avoidColors: ['亮橘色', '芥末黄', '铁锈红'],
-  },
-  seasonReasoning: {
-    season: 'cool-summer',
-    reasoning: '冷色调底色 + 低对比度 + 中性明度，与冷夏季相的莫兰迪美学高度契合。性格上清冷内敛的风格进一步确认了这一判断。',
-    confidence: 'high',
-    candidates: ['cool-summer', 'soft-summer'],
-  },
-  styling: {
-    summary: '冷调克制 × 静谧力量 = 毫不费力的智性美',
-    recommendations: [
-      {
-        scene: '职场通勤',
-        pieces: ['藏青西装外套', '真丝白衬衫', '银灰阔腿裤'],
-        colorScheme: { primary: '藏青', secondary: '珍珠白', accent: '银灰' },
-        tip: '用同色系层次感代替撞色——藏青+深灰+银灰，层次分明又不争不抢。',
-        why: '冷色系放大你天生的智性气场，真丝材质与你的审美敏感度完美呼应。',
-      },
-      {
-        scene: '周末约会',
-        pieces: ['灰粉针织连衣裙', '裸粉羊绒围巾', '白金极简耳饰'],
-        colorScheme: { primary: '灰粉', secondary: '裸粉', accent: '白金' },
-        tip: '约会穿搭的关键是"看起来没怎么打扮却恰到好处"——灰粉是冷夏的秘密武器。',
-        why: '低饱和暖粉平衡了你气质中的冷感，多一分温柔却不失你的清冷底色。',
-      },
-      {
-        scene: '日常休闲',
-        pieces: ['石灰色棉质T恤', '薰衣草灰直筒裤', '帆布小白鞋'],
-        colorScheme: { primary: '石灰色', secondary: '薰衣草灰', accent: '纯白' },
-        tip: '把你的衣柜想象成蒙德里安的画——灰、白、淡紫，几何般精确又呼吸感十足。',
-        why: '你是那种穿基础款就赢的人，关键是颜色的选择必须严格在冷色调范围内。',
-      },
-      {
-        scene: '正式场合',
-        pieces: ['冰蓝丝绒吊带裙', '银色细跟高跟鞋', '珍珠极简手链'],
-        colorScheme: { primary: '冰蓝', secondary: '珍珠白', accent: '银' },
-        tip: '正式场合大胆用冷色高饱和——冰蓝、粉紫、钢灰，你是少数能驾驭这些颜色的人。',
-        why: '冷色高饱和在你身上不是张扬，而是精准的优雅。你的肤色让这些颜色成为你的武器。',
-      },
-    ],
-    colorGuide: {
-      bestColors: ['冰蓝', '藏青', '灰粉', '薰衣草', '珍珠白', '钢灰'],
-      goodColors: ['雾霾蓝', '玫瑰灰', '裸粉', '银灰', '薄荷灰'],
-      cautionColors: ['亮橘', '芥末黄', '铁锈红', '军绿', '焦糖'],
-    },
-    signatureLook: '你不需要logo和图案——单色层次穿搭是你的签名。灰+白+一抹冷色，就是你的制服。极简到极致就是你的奢侈。',
-  },
-};
-
 function initStoryPage() {
-  // TODO: 删除假数据，恢复真实逻辑
-  // const result = PipelineClient.getResult() || PipelineClient.getCachedResult();
-  const result = MOCK_PIPELINE_RESULT;
+  const result = PipelineClient.getResult() || PipelineClient.getCachedResult();
   const season = (result && result.season) || smse.get('season') || 'cool-summer';
 
   // Apply theme and save season
@@ -1270,8 +1200,7 @@ function buildPaletteCollage(containerId, theme, small = false) {
    REPORT MODAL
    ========================================================= */
 function openReportModal() {
-  const result = MOCK_PIPELINE_RESULT;
-  // TODO: 替换为 const result = PipelineClient.getResult() || PipelineClient.getCachedResult();
+  const result = PipelineClient.getResult() || PipelineClient.getCachedResult();
 
   const modal = document.getElementById('reportModal');
   if (!result) return;
