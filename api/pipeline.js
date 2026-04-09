@@ -172,7 +172,7 @@ async function step2Face({ image }) {
         { type: 'image_url', image_url: { url: image, detail: 'low' } },
       ],
     },
-  ], 'google/gemini-2.0-flash-001');
+  ], 'anthropic/claude-sonnet-4');
 
   return parseJSON(content);
 }
