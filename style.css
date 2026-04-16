@@ -609,8 +609,38 @@ html, body {
   line-height: 1.4;
 }
 
-.quiz-option.touched { filter: grayscale(0%); }
-.quiz-option.selected { filter: grayscale(0%); outline: 3px solid #fff; }
+.quiz-option.selected { filter: grayscale(0%); outline: 3px solid #fff; outline-offset: -3px; }
+
+/* Quiz footer — next button */
+.quiz-footer {
+  padding: 0.75rem 1.25rem max(env(safe-area-inset-bottom, 0px), 1rem);
+  flex-shrink: 0;
+}
+
+.btn-quiz-next {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  background: #1A1410;
+  color: #FAF8F5;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.btn-quiz-next:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.btn-quiz-next:not(:disabled):active { opacity: 0.75; }
+
+[data-theme="dark"] .btn-quiz-next { background: #E8E8E8; color: #111; }
 
 /* =========================================================
    PAGE 4 · VISUAL SAMPLING

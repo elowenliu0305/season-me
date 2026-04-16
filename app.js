@@ -697,6 +697,17 @@ function initQuizPage() {
   currentQuizIndex = 0;
   smse.setJSON('quiz', []);
   renderQuestion(0);
+
+  // Wire up the Next button (persists across questions)
+  const btnNext = document.getElementById('btnQuizNext');
+  btnNext.onclick = () => {
+    if (quizAnswers[currentQuizIndex] === undefined) return;
+    if (currentQuizIndex + 1 < QUIZ_DATA.length) {
+      slideQuizTo(currentQuizIndex + 1);
+    } else {
+      showPage('sampling');
+    }
+  };
 }
 
 // 4.2 Render question
@@ -704,6 +715,10 @@ function renderQuestion(index) {
   const data = QUIZ_DATA[index];
   const progEl = document.getElementById('quizProgressNum');
   progEl.textContent = String(index + 1).padStart(2, '0');
+
+  // Reset Next button state
+  const btnNext = document.getElementById('btnQuizNext');
+  if (btnNext) btnNext.disabled = true;
 
   const content = document.getElementById('quizContent');
   content.innerHTML = `
@@ -721,27 +736,16 @@ function renderQuestion(index) {
       <div class="quiz-option-label">${label}</div>
     `;
 
-    // 4.3 Greyscale → color on touch
-    btn.addEventListener('touchstart', () => btn.classList.add('touched'), { passive: true });
-    btn.addEventListener('touchend', () => btn.classList.remove('touched'), { passive: true });
-    btn.addEventListener('mouseenter', () => btn.classList.add('touched'));
-    btn.addEventListener('mouseleave', () => btn.classList.remove('touched'));
-
-    // 4.4 Answer & advance
+    // 4.4 Select option — show colour, no auto-advance
     btn.addEventListener('click', () => {
+      // Deselect all siblings
+      optGrid.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected'));
+      // Select this one (shows colour via CSS)
       btn.classList.add('selected');
       quizAnswers[index] = i;
       smse.setJSON('quiz', quizAnswers);
-
-      setTimeout(() => {
-        if (index + 1 < QUIZ_DATA.length) {
-          // Slide to next question
-          slideQuizTo(index + 1);
-        } else {
-          // 4.5 All done — go to sampling
-          showPage('sampling');
-        }
-      }, 280);
+      // Enable Next button
+      if (btnNext) btnNext.disabled = false;
     });
 
     optGrid.appendChild(btn);
