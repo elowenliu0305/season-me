@@ -4,7 +4,7 @@
 
 ---
 
-## 当前状态：社区社交地图 + 深色模式修复 + 采样页UI优化 已上线
+## 当前状态：社区社交地图 + 点赞/踩 + 深色模式修复 已上线
 
 ### 本次更新（2026-04-09）
 
@@ -13,19 +13,27 @@
 - 封面页 GET STARTED 上方新增 COMMUNITY MAP 入口按钮
 - Export 页新增 SHARE TO COMMUNITY MAP 按钮（accent 色填充）
 - Supabase 后端（项目: season-me-community, region: ap-southeast-1）
-  - `community_posts` 表：卡片图、昵称、灵兽、季相、态度语、经纬度、点赞数
+  - `community_posts` 表：卡片图、昵称、灵兽、季相、态度语、经纬度、点赞数、踩数
   - `community_likes` 表：UNIQUE(post_id, session_id) 防重复点赞
-  - RLS 策略：posts/likes 公开读写
-  - RPC 函数：`increment_likes` / `decrement_likes`（SECURITY DEFINER）
+  - `community_dislikes` 表：UNIQUE(post_id, session_id) 防重复踩
+  - RLS 策略：posts/likes/dislikes 公开读写
+  - RPC 函数：`increment_likes` / `decrement_likes` / `increment_dislikes` / `decrement_dislikes`
   - Storage bucket: `share-cards`（public, 2MB, png/jpeg）
 - 匿名身份：localStorage session_id（crypto.randomUUID）
-- 发布流程：分享卡片 PNG → `api/upload-card.js` 上传至 Supabase Storage → 插入 posts
+- 发布流程：分享卡片 PNG → base64 编码 → `api/upload-card.js` → Supabase Storage → 插入 posts
 - 浏览器定位：Geolocation API + Nominatim 反向地理编码
-- 地图 marker：48px 圆形卡片缩略图，加载失败降级为灵兽 emoji
-- 底部弹出面板：卡片图 + 季相 + 昵称 + 态度语 + 点赞按钮
+- 地图 marker：44×58 圆角方形缩略图（border-radius: 6px），接近分享卡片 3:4 比例
+- 加载失败降级为灵兽 emoji
+- 底部弹出面板：卡片图 + 季相 + 昵称 + 态度语 + 点赞/踩按钮
 - 深色模式重新生成分享卡片：`ensureShareCardPopulated()` + `generateShareImageForCommunity()`
 
-**2. 采样页 UI 重构**
+**2. 点赞/踩功能**
+- 点赞 ♡（红色激活）+ 踩 👎（红色激活）互斥：点一个自动取消另一个
+- 每人每帖只能赞一次或踩一次（数据库 UNIQUE 约束 + localStorage 缓存）
+- 点击后底部面板实时刷新（`refreshSheetAndMarkers`）
+- `window.toggleLike` / `window.toggleDislike` 全局暴露给 inline onclick
+
+**3. 采样页 UI 重构**
 - 浅色玻璃态风格：呼吸渐变背景（#fffbff → #fdf9f2 → #e5e2e1）
 - 毛玻璃卡片（backdrop-filter: blur(20px) + 半透明白底）
 - 主按钮"实时拍摄"：深色 pill（border-radius: 2rem）
@@ -34,7 +42,7 @@
 - 底部隐私栏（lock 图标 + 隐私文案）
 - 完整深色模式适配
 
-**3. 深色模式全面修复**
+**4. 深色模式全面修复**
 - 根因：`ThemeManager.apply()` 用 inline style 设置 CSS 变量，优先级高于 `[data-theme="dark"]`
 - 修复：apply() 内部检测 isDark，强制覆盖 `--base-bg` → `#0F0F0F`、`--text-main` → `#E8E8E8`、`--text-secondary` → `#9A9A9A`
 - 深色/浅色切换时自动重新 apply 季相主题
@@ -43,14 +51,15 @@
 - 深色模式报告文字适配（#E8E8E8/#9A9A9A）
 - 测验题号深色模式描边：rgba(255,255,255,0.1)
 
-**4. Service Worker 更新**
+**5. 上传 API 修复**
+- 根因：`req.formData()` 在 Vercel Node.js Functions 中不可用（TypeError: req.formData is not a function）
+- 修复：前端改用 base64 编码（JSON body），后端 `Buffer.from(data, 'base64')` 解码后上传
+
+**6. Service Worker 更新**
 - CACHE_NAME v1 → v2（强制刷新）
 - CDN 白名单：unpkg.com, cdn.jsdelivr.net, cartocdn.com, supabase.co, openstreetmap.org, nominatim
 
-**5. 新增文件**
-- `api/upload-card.js` — Vercel serverless function，Supabase Storage 图片上传
-
-**6. 环境变量（Vercel）**
+**7. 环境变量（Vercel）**
 - `SUPABASE_URL` — Supabase 项目 URL
 - `SUPABASE_ANON_KEY` — Supabase 公开密钥
 - `SUPABASE_SERVICE_ROLE_KEY` — Supabase 服务端密钥（Storage 上传）
@@ -112,10 +121,10 @@
 - SHARE TO COMMUNITY MAP 按钮 → 社区地图
 
 **9. 社区地图页 (Community)**
-- Leaflet.js 真实地理地图
-- 全屏地图 + 顶部导航 + FAB 发布按钮
-- 底部弹出面板查看帖子详情 + 点赞
-- Supabase 后端存储
+- Leaflet.js 真实地理地图（CartoDB Light 瓦片）
+- 全屏地图 + 顶部导航栏 + FAB 发布按钮
+- 底部弹出面板：卡片详情 + 点赞/踩
+- 圆角方形 marker（44×58，接近卡片 3:4 比例）
 
 **10. 后端 AI 流水线 (`api/pipeline.js`)**
 - Step 1（并行）：问卷 → 人格分析（Gemini Flash）
@@ -124,11 +133,11 @@
 - Step 4（串行）：季相 + 人格 → 穿搭推荐（Claude Sonnet）
 
 **11. 图片上传 API (`api/upload-card.js`)**
-- POST /api/upload-card — 上传分享卡片 PNG 至 Supabase Storage
+- POST /api/upload-card — base64 JSON body → Buffer 解码 → Supabase Storage
 - Service role key 认证，返回 public URL
 
 **12. 前端优化**
-- 深色模式全页面适配（ThemeManager + CSS 变量）
+- 深色模式全页面适配（ThemeManager inline style + dark override）
 - PWA（manifest.json + service worker v2）
 - SEO（meta + OG + JSON-LD）
 - Plausible 数据埋点
@@ -153,11 +162,51 @@
 
 ### 待办 / 已知问题
 
-- [ ] 验证线上完整社区流程（发布 → 地图显示 → 点赞）
+- [ ] 社区帖子删除（仅自己的帖子）
+- [ ] 社区内容举报/审核机制
+- [ ] 地图 marker 聚类（高密度区域）
 - [ ] Step 2 无照片时的错误处理优化
 - [ ] Step 3 fallback 季相判定（当 face/personality 缺失时）
 - [ ] 分享图 OG 图片制作
 - [ ] 多语言支持（英文 UI）
-- [ ] 社区帖子删除（仅自己的帖子）
-- [ ] 社区内容举报/审核机制
-- [ ] 地图 marker 聚类（高密度区域）
+
+---
+
+## 归档说明（2026-04-10）
+
+### 项目完成度总结
+
+项目已完成 v1.0 并上线。对比 PDF 开发文档、OpenSpec 设计文档和实际代码实现，以下记录了设计与实现的差异：
+
+### 设计→实现的重大变化
+
+| 设计文档描述 | 实际实现 | 说明 |
+|------------|---------|------|
+| 零后端、纯前端，无需 AI API | 有后端：Vercel Serverless Functions + OpenRouter AI API | 项目演进方向变化，从离线 Canvas Lab 采样升级为真 AI 分析 |
+| 7 页 SPA | 8 页 SPA（+ Community Map） | 新增社区地图功能 |
+| 前端 Canvas 采样肤色（L\*a\*b\*）进行季相计算 | 完全由 AI Pipeline 4 步分析替代 | sRGB→Lab 转换和 season-engine 前端算法已被移除，改为后端 AI |
+| 8 个灵感生物 SVG（4×2 网格） | 64 个 emoji 灵兽（8×8 网格） | 从 SVG 改为 emoji，数量从 8 扩展到 64 |
+| 无 PWA / Service Worker | 已实现 PWA（manifest.json + sw.js v2） | 在 complete-remaining-frontend 中补充实现 |
+| 无后端 / 数据库 / 用户账号 | Supabase PostgreSQL + Storage + 匿名 session | 社区功能需要后端支持 |
+| 不需要多语言国际化 | UI 以中文为主，季相名称中英双语 | 部分实现了中英双语（仅季相标题） |
+
+### PDF 开发文档中提到但未实现的功能
+
+1. **专属审美 ID**（如「AU-7924」）：PDF 结果页描述中有 8 位随机字母+数字审美 ID，代码中未实现
+2. **小红书直接跳转发布**：PDF 描述一键跳转小红书 APP 发布页，实际只实现了剪贴板复制 + 本地保存
+3. **双版本分享图**：PDF 要求生成"社交名片极简版"和"核心内容精华版"两个 3:4 版本供选择，实际只生成一种
+4. **人脸检测校验**：PDF 要求上传照片时做人脸检测（正脸、无遮挡）、光线检测（过暗/过曝），实际未实现前端校验（由后端 AI 步骤处理）
+5. **localStorage 7 天缓存过期**：PDF 要求缓存有效期 7 天，过期需重新测试，代码中未实现过期逻辑
+6. **颜值核心优势 2-3 个（带落地建议）**：PDF 要求每个优势配 1 句可落地的利用建议，实际由 AI 生成但格式不固定
+7. **风格定位标签（主风格 + 辅助风格 + 场景适配）**：PDF 有明确的标签结构，实际由 AI 自由生成
+
+### OpenSpec tasks.md 与实际实现的差异
+
+- OpenSpec Task 3.3 描述"内联 8 个灵感生物 SVG"，实际实现为 64 个 emoji 灵兽
+- OpenSpec Task 7（季相计算引擎）的 Lab 色彩转换、Canvas 采样等前端算法已被后端 AI Pipeline 完全替代
+- OpenSpec Non-Goals 列出"不需要 PWA"，但在后续 complete-remaining-frontend change 中已实现
+- OpenSpec 的 Context 描述为"7 个页面"，实际为 8 个（新增 Community Map）
+
+### 已归档的外部文件
+
+- OpenSpec 设计规范已从 `/Users/jyokann/openspec/changes/season-me-see-myself/` 复制到项目内 `openspec/changes/season-me-see-myself/`
