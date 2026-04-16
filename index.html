@@ -52,11 +52,33 @@
       </div>
       <div class="cover-start-area">
         <button class="btn-community" id="btnCommunity">COMMUNITY MAP</button>
+        <button class="btn-community" id="btnColourGuide">COLOUR GUIDE</button>
         <button class="btn-start" id="btnStart">GET<br/>STARTED</button>
       </div>
       <button class="btn-theme-toggle" id="btnThemeToggle" aria-label="Toggle dark mode">☀</button>
     </div>
   </section>
+
+  <!-- ===== COLOUR GUIDE MODAL ===== -->
+  <div id="colourGuideModal" class="cg-modal" aria-hidden="true">
+    <div class="cg-sheet">
+      <div class="cg-header">
+        <div class="cg-header-left">
+          <span class="cg-header-label">COLOUR GUIDE</span>
+          <span class="cg-header-sub">12 Colour Seasons</span>
+        </div>
+        <button class="cg-close" id="btnColourGuideClose" aria-label="Close">✕</button>
+      </div>
+      <!-- Season tab pills -->
+      <div class="cg-tabs" id="cgTabs">
+        <!-- injected by JS -->
+      </div>
+      <!-- Cards container -->
+      <div class="cg-cards" id="cgCards">
+        <!-- injected by JS -->
+      </div>
+    </div>
+  </div>
 
   <!-- ===== PAGE 2: IDENTITY SETUP ===== -->
   <section id="page-identity" class="page">

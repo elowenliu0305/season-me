@@ -2149,3 +2149,343 @@ html, body {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
 }
+
+/* =========================================================
+   COLOUR GUIDE MODAL
+   ========================================================= */
+.cg-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.cg-modal.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.cg-sheet {
+  width: 100%;
+  height: 92dvh;
+  background: var(--base-bg);
+  border-radius: 1.25rem 1.25rem 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.cg-modal.open .cg-sheet {
+  transform: translateY(0);
+}
+
+/* Header */
+.cg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0.75rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+
+[data-theme="dark"] .cg-header {
+  border-color: rgba(255,255,255,0.07);
+}
+
+.cg-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cg-header-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent-color);
+}
+
+.cg-header-sub {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--text-main);
+}
+
+.cg-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.06);
+  border: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.cg-close:active { background: rgba(0,0,0,0.12); }
+
+[data-theme="dark"] .cg-close {
+  background: rgba(255,255,255,0.08);
+  color: #aaa;
+}
+
+/* Season tab pills */
+.cg-tabs {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.85rem 1.25rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.cg-tabs::-webkit-scrollbar { display: none; }
+
+.cg-tab {
+  flex-shrink: 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.35rem 0.85rem;
+  border-radius: 2rem;
+  border: 1.5px solid rgba(0,0,0,0.18);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+  white-space: nowrap;
+}
+
+.cg-tab:active { opacity: 0.7; }
+
+.cg-tab.active {
+  background: var(--text-main);
+  border-color: var(--text-main);
+  color: var(--base-bg);
+}
+
+[data-theme="dark"] .cg-tab {
+  border-color: rgba(255,255,255,0.18);
+}
+
+[data-theme="dark"] .cg-tab.active {
+  background: #E8E8E8;
+  border-color: #E8E8E8;
+  color: #111;
+}
+
+/* Cards horizontal scroll container */
+.cg-cards {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 1.25rem 1.5rem;
+}
+
+/* Individual season card */
+.cg-card {
+  display: none;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: cgCardIn 0.3s ease;
+}
+
+.cg-card.visible {
+  display: flex;
+}
+
+@keyframes cgCardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Palette hero strip */
+.cg-palette {
+  display: flex;
+  height: 72px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cg-palette-swatch {
+  flex: 1;
+}
+
+/* Season title area */
+.cg-season-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cg-season-name-en {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 900;
+  font-size: 1.65rem;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.cg-season-name-zh {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  color: var(--accent-color);
+}
+
+/* Typical figures */
+.cg-figures {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cg-section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.cg-figure-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cg-figure-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 2rem;
+  background: rgba(0,0,0,0.05);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .cg-figure-chip {
+  background: rgba(255,255,255,0.07);
+}
+
+.cg-figure-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Personality traits */
+.cg-traits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cg-trait-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cg-trait-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.35rem;
+  background: var(--accent-color);
+  color: #fff;
+  opacity: 0.85;
+}
+
+/* Style recommendations */
+.cg-style {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.cg-style-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+/* Divider */
+.cg-divider {
+  height: 1px;
+  background: rgba(0,0,0,0.07);
+}
+
+[data-theme="dark"] .cg-divider {
+  background: rgba(255,255,255,0.07);
+}
+
+/* Nav arrows at bottom */
+.cg-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0 0;
+  flex-shrink: 0;
+}
+
+.cg-nav-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  border: 1.5px solid rgba(0,0,0,0.15);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: all 0.2s;
+}
+
+.cg-nav-btn:active { opacity: 0.6; }
+.cg-nav-btn:disabled { opacity: 0.25; pointer-events: none; }
+
+[data-theme="dark"] .cg-nav-btn {
+  border-color: rgba(255,255,255,0.15);
+}
+
+.cg-nav-counter {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+}

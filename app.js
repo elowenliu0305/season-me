@@ -1907,6 +1907,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('page-cover').style.display = 'block';
 
   initCoverPage();
+  initColourGuide();
 });
 
 /* =========================================================
@@ -1949,3 +1950,286 @@ function updateThemeToggle(mode) {
   const btn = document.getElementById('btnThemeToggle');
   if (btn) btn.textContent = mode === 'dark' ? '☾' : '☀';
 }
+
+/* =========================================================
+   COLOUR GUIDE MODAL
+   ========================================================= */
+const COLOUR_GUIDE_SEASONS = [
+  {
+    id: 'light-spring',
+    nameEn: 'Light Spring',
+    nameZh: '明亮春季',
+    palette: ['#F9E4B7', '#F5C6A0', '#F0A88A', '#E88A72', '#D4C5A9'],
+    accentColor: '#F0A88A',
+    figures: ['奥黛丽·赫本', '泰勒·斯威夫特', '布兰妮·斯皮尔斯'],
+    traits: ['明朗', '活泼', '清新', '亲切', '阳光'],
+    style: '浅暖色系最显气色，米白、桃粉、嫩黄是主力色。避免过深或过冷的色调。推荐轻盈面料如雪纺、棉麻，款式简洁不繁复。金色饰品提亮整体，印花选细碎花卉或几何小图案。'
+  },
+  {
+    id: 'warm-spring',
+    nameEn: 'Warm Spring',
+    nameZh: '温暖春季',
+    palette: ['#F7C59F', '#F4A261', '#E76F51', '#C44536', '#8B3A3A'],
+    accentColor: '#F4A261',
+    figures: ['贾斯汀·比伯', '艾玛·斯通', '林赛·罗韩'],
+    traits: ['热情', '温暖', '直接', '有活力', '感染力强'],
+    style: '暖橙、珊瑚、番茄红是天生好色。大地色系穿搭最具整体感，搭配棕色皮革配件。避免冷灰和冰蓝。推荐有质感的棉质或轻磅针织，金属感首饰偏暖金色调。'
+  },
+  {
+    id: 'clear-spring',
+    nameEn: 'Clear Spring',
+    nameZh: '清澈春季',
+    palette: ['#FFE8D6', '#FFB347', '#FF6B6B', '#C23B22', '#1B998B'],
+    accentColor: '#FF6B6B',
+    figures: ['斯嘉丽·约翰逊', '安吉丽娜·朱莉', '张曼玉'],
+    traits: ['鲜明', '对比强', '个性突出', '有张力', '记忆点强'],
+    style: '高饱和对比色是最佳武器，宝蓝配正红、翠绿配珊瑚都能驾驭。避免粉雾色和灰调。款式可以大胆，结构感强的剪裁反而衬托气场。配件选饱和色或金属感十足的款式。'
+  },
+  {
+    id: 'light-summer',
+    nameEn: 'Light Summer',
+    nameZh: '明亮夏季',
+    palette: ['#E8EAF6', '#C5CAE9', '#9FA8DA', '#7986CB', '#B0BEC5'],
+    accentColor: '#9FA8DA',
+    figures: ['格蕾丝·凯利', '妮可·基德曼', '凯特·布兰切特'],
+    traits: ['优雅', '柔和', '知性', '低调', '精致'],
+    style: '粉紫、薰衣草、冰蓝和浅灰蓝是专属配色。整体建议选低饱和度的冷柔色，避免暖黄和大地色。面料偏向丝质、薄款针织。银色或玫瑰金首饰比黄金更出彩。'
+  },
+  {
+    id: 'cool-summer',
+    nameEn: 'Cool Summer',
+    nameZh: '清冷夏季',
+    palette: ['#CFE2FF', '#9EC5FE', '#6EA8FE', '#3D8BCD', '#084298'],
+    accentColor: '#6EA8FE',
+    figures: ['凯特·王妃', '娜塔莉·波特曼', '范冰冰'],
+    traits: ['冷静', '理性', '高冷', '有距离感', '气场稳'],
+    style: '玫瑰灰、灰紫、冰粉和烟蓝最为和谐。整体穿搭注重协调性，适合单色调叠穿。避免橙色系和暖棕。剪裁偏向简洁利落，银色配件提升整体精致感。'
+  },
+  {
+    id: 'soft-summer',
+    nameEn: 'Soft Summer',
+    nameZh: '柔和夏季',
+    palette: ['#D4C5C7', '#C2A8A8', '#A67C7C', '#8B5A5A', '#6B3F3F'],
+    accentColor: '#C2A8A8',
+    figures: ['莫妮卡·贝鲁奇', '艾拉·菲茨杰拉德', '苏菲·玛索'],
+    traits: ['温柔', '内敛', '细腻', '感性', '亲和'],
+    style: '雾玫瑰、灰粉、蓝灰、浅茶色构成最佳衣橱。饱和度要低，冷暖色均可但要偏灰调。避免纯黑和高亮荧光色。面料选有垂感的柔软材质，整体给人温柔不失品味的感觉。'
+  },
+  {
+    id: 'soft-autumn',
+    nameEn: 'Soft Autumn',
+    nameZh: '柔和秋季',
+    palette: ['#E8D5B7', '#D4A96A', '#B5835A', '#8B6343', '#5C3D2E'],
+    accentColor: '#D4A96A',
+    figures: ['布莱克·莱弗利', '杰西卡·阿尔芭', '费利西蒂·琼斯'],
+    traits: ['温暖', '成熟', '自然', '包容', '大气'],
+    style: '驼色、摩卡、橄榄绿、砖红是天然基础色，搭配磨砂皮革配件最协调。避免冷灰和冰蓝。面料选有质感的羊毛、棉麻，款式不宜太紧身，宽松有型更舒适大方。'
+  },
+  {
+    id: 'warm-autumn',
+    nameEn: 'Warm Autumn',
+    nameZh: '温暖秋季',
+    palette: ['#F4A261', '#E76F51', '#C44536', '#8B3A3A', '#5C2E2E'],
+    accentColor: '#E76F51',
+    figures: ['朱利亚·罗伯茨', '梅根·福克斯', '莱昂纳多·迪卡普里奥'],
+    traits: ['自信', '大气', '热烈', '有存在感', '成熟魅力'],
+    style: '深番茄红、咖棕、暖橄榄、橙棕是最强底色，穿搭时整体保持暖色调统一感。避免冷色系和荧光色。皮革、粗纺羊毛等厚重材质质感出众，金色和铜色是最佳配件选择。'
+  },
+  {
+    id: 'deep-autumn',
+    nameEn: 'Deep Autumn',
+    nameZh: '深邃秋季',
+    palette: ['#8B4513', '#6B3A2A', '#4A2518', '#2D1B0E', '#1A1008'],
+    accentColor: '#8B4513',
+    figures: ['裴斗娜', '宝拉·阿巴杜尔', '詹妮弗·洛佩兹'],
+    traits: ['神秘', '深邃', '强势', '独特', '有故事感'],
+    style: '深栗、酒红、暗绿、深棕是专属色系，整体着装偏向深色调，单色搭配更显气场。避免浅粉和粉蜡笔色。推荐厚重面料和立体剪裁，金色或深铜色饰品强化整体高级感。'
+  },
+  {
+    id: 'clear-winter',
+    nameEn: 'Clear Winter',
+    nameZh: '清澈冬季',
+    palette: ['#FFFFFF', '#1A1A2E', '#16213E', '#0F3460', '#E94560'],
+    accentColor: '#E94560',
+    figures: ['奥黛丽·塔图', '宋慧乔', '章子怡'],
+    traits: ['鲜明', '干净', '对比强', '有冲击力', '印象深刻'],
+    style: '纯白与纯黑的高对比搭配是天生优势，宝蓝、正红、翠绿都能轻松驾驭。避免混浊和灰调色。剪裁要干净利落，避免堆叠繁复。银色和黑色配件最能凸显冬季清澈感。'
+  },
+  {
+    id: 'cool-winter',
+    nameEn: 'Cool Winter',
+    nameZh: '清冷冬季',
+    palette: ['#E8E8F0', '#B0B0C8', '#7878A0', '#404068', '#181830'],
+    accentColor: '#7878A0',
+    figures: ['凯特·温斯莱特', '裘德·洛', '周迅'],
+    traits: ['冷静', '疏离', '理性', '高级感强', '有城市感'],
+    style: '冰灰、钢蓝、烟紫、纯白是最佳选择，整体偏冷色调最显气质。避免暖黄和大地色。极简主义穿搭最出彩，单色系叠穿、银色配件是标配，面料选有光泽感的材质。'
+  },
+  {
+    id: 'deep-winter',
+    nameEn: 'Deep Winter',
+    nameZh: '深邃冬季',
+    palette: ['#1A1A2E', '#16213E', '#0F3460', '#533483', '#E94560'],
+    accentColor: '#533483',
+    figures: ['莫妮卡·贝鲁奇', '碧昂丝', '赵雷'],
+    traits: ['深邃', '磁场强大', '有压迫感', '神秘', '成熟'],
+    style: '深酒红、墨绿、深紫、深蓝和纯黑打造强势衣橱。避免浅色和低饱和度色调，深色调才能衬托出深冬季的气场。推荐挺括面料和结构感强的款式，金属配件选黑色或深银色。'
+  }
+];
+
+let cgCurrentIndex = 0;
+
+function initColourGuide() {
+  const modal  = document.getElementById('colourGuideModal');
+  const tabsEl = document.getElementById('cgTabs');
+  const cardsEl = document.getElementById('cgCards');
+
+  // Build tabs
+  COLOUR_GUIDE_SEASONS.forEach((s, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'cg-tab' + (i === 0 ? ' active' : '');
+    tab.textContent = s.nameEn.toUpperCase();
+    tab.dataset.index = i;
+    tab.onclick = () => showCgCard(i);
+    tabsEl.appendChild(tab);
+  });
+
+  // Build cards
+  COLOUR_GUIDE_SEASONS.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'cg-card' + (i === 0 ? ' visible' : '');
+    card.dataset.index = i;
+
+    // Palette strip
+    const paletteDiv = document.createElement('div');
+    paletteDiv.className = 'cg-palette';
+    s.palette.forEach(c => {
+      const sw = document.createElement('div');
+      sw.className = 'cg-palette-swatch';
+      sw.style.background = c;
+      paletteDiv.appendChild(sw);
+    });
+
+    // Season title
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'cg-season-title';
+    titleDiv.innerHTML = '<div class="cg-season-name-en">' + s.nameEn + '</div>' +
+      '<div class="cg-season-name-zh">' + s.nameZh + '</div>';
+
+    // Typical figures
+    const figDiv = document.createElement('div');
+    figDiv.className = 'cg-figures';
+    figDiv.innerHTML = '<span class="cg-section-label">Typical Figures</span>';
+    const chips = document.createElement('div');
+    chips.className = 'cg-figure-chips';
+    s.figures.forEach(name => {
+      const chip = document.createElement('div');
+      chip.className = 'cg-figure-chip';
+      chip.innerHTML = '<span class="cg-figure-dot" style="background:' + s.accentColor + '"></span>' + name;
+      chips.appendChild(chip);
+    });
+    figDiv.appendChild(chips);
+
+    // Traits
+    const traitsDiv = document.createElement('div');
+    traitsDiv.className = 'cg-traits';
+    traitsDiv.innerHTML = '<span class="cg-section-label">Personality</span>';
+    const tagList = document.createElement('div');
+    tagList.className = 'cg-trait-list';
+    s.traits.forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'cg-trait-tag';
+      tag.style.background = s.accentColor;
+      tag.textContent = t;
+      tagList.appendChild(tag);
+    });
+    traitsDiv.appendChild(tagList);
+
+    // Divider
+    const div1 = document.createElement('div');
+    div1.className = 'cg-divider';
+
+    // Style
+    const styleDiv = document.createElement('div');
+    styleDiv.className = 'cg-style';
+    styleDiv.innerHTML = '<span class="cg-section-label">Style Guide</span>' +
+      '<p class="cg-style-text">' + s.style + '</p>';
+
+    // Nav
+    const navDiv = document.createElement('div');
+    navDiv.className = 'cg-nav';
+    const btnPrev = document.createElement('button');
+    btnPrev.className = 'cg-nav-btn';
+    btnPrev.textContent = '← PREV';
+    btnPrev.disabled = i === 0;
+    btnPrev.onclick = () => showCgCard(cgCurrentIndex - 1);
+
+    const counter = document.createElement('span');
+    counter.className = 'cg-nav-counter';
+    counter.textContent = (i + 1) + ' / ' + COLOUR_GUIDE_SEASONS.length;
+
+    const btnNext = document.createElement('button');
+    btnNext.className = 'cg-nav-btn';
+    btnNext.textContent = 'NEXT →';
+    btnNext.disabled = i === COLOUR_GUIDE_SEASONS.length - 1;
+    btnNext.onclick = () => showCgCard(cgCurrentIndex + 1);
+
+    navDiv.appendChild(btnPrev);
+    navDiv.appendChild(counter);
+    navDiv.appendChild(btnNext);
+
+    card.appendChild(paletteDiv);
+    card.appendChild(titleDiv);
+    card.appendChild(figDiv);
+    card.appendChild(traitsDiv);
+    card.appendChild(div1);
+    card.appendChild(styleDiv);
+    card.appendChild(navDiv);
+    cardsEl.appendChild(card);
+  });
+
+  // Open button
+  document.getElementById('btnColourGuide').onclick = () => {
+    modal.setAttribute('aria-hidden', 'false');
+    modal.classList.add('open');
+    trackEvent('colour_guide_open');
+  };
+
+  // Close button
+  document.getElementById('btnColourGuideClose').onclick = () => closeCgModal();
+
+  // Tap backdrop to close
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeCgModal();
+  });
+}
+
+function closeCgModal() {
+  const modal = document.getElementById('colourGuideModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function showCgCard(index) {
+  if (index < 0 || index >= COLOUR_GUIDE_SEASONS.length) return;
+  cgCurrentIndex = index;
+
+  // Update tabs
+  document.querySelectorAll('.cg-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === index);
+  });
+
+  // Scroll active tab into view
+  const activeTab = document.querySelector('.cg-tab.active');
+  if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+  // Show card
+  document.querySelectorAll('.cg-card').forEach((c, i) => {
+    c.classList.toggle('visible', i === index);
+  });
+
+  // Scroll cards back to top
+  document.getElementById('cgCards').scrollTop = 0;
+}
+
+// initColourGuide is called from the main DOMContentLoaded handler above
