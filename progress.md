@@ -244,3 +244,41 @@
 ### 已归档的外部文件
 
 - OpenSpec 设计规范已从 `/Users/jyokann/openspec/changes/season-me-see-myself/` 复制到项目内 `openspec/changes/season-me-see-myself/`
+
+---
+
+## 进度记录（2026-04-28）
+
+### 本轮已完成
+
+- 修复 Community Map 读取失败：新增后端代理 `api/community-posts.js`，前端不再直接依赖浏览器端 Supabase 请求。
+- 修复社区点赞/踩：新增 `api/community-reactions.js`，由后端检查当前状态后更新计数，避免重复增减。
+- 修复新用户发布卡片失败：分享卡生成改为可测量隐藏页面，并压缩为 JPEG，避免 Supabase Storage 2MB 限制。
+- 修复 Report 内容异常：
+  - 提高上传照片分析清晰度和 AI vision detail。
+  - 季相判断改为以脸部色彩证据为主，性格只做弱参考。
+  - 增加 12 季型固定色彩边界，避免色彩推荐跑偏。
+  - 统一季相命名：浅春、浅夏、柔夏、明亮春/冬。
+- 修复“所有人都是冷夏”的兜底问题：
+  - 性格分析失败时使用本地 fallback personality，不再中断报告。
+  - 照片分析失败时根据问卷维度生成备用季相，不再固定默认冷夏。
+  - AI 季相确认失败时根据照片色彩规则生成备用判断。
+- 修复本地 `file://` 打开时接口不可用：
+  - 前端 API 请求在 `file://` 环境下自动指向 `https://season-me.vercel.app`。
+  - API 加入 CORS/OPTIONS 响应，支持本地文件页面调用线上后端。
+- 更新缓存版本到 `v7`，避免浏览器继续使用旧版 `app.js?v=4/v6`。
+
+### 验证结果
+
+- `node --check`：`app.js`、`api/pipeline.js`、`api/community-posts.js`、`api/community-reactions.js`、`api/upload-card.js`、`sw.js` 均通过。
+- `git diff --check` 通过。
+- 线上部署完成并 alias 到 `https://season-me.vercel.app/`。
+- 线上首页确认加载 `app.js?v=7` 与 `style.css?v=7`。
+- 社区接口 `GET /api/community-posts?limit=1` 正常返回。
+- `OPTIONS /api/pipeline` 已返回 CORS 允许头。
+- 在生产站实际点击验证：开始按钮、灵兽卡、测试卡片可点击，选中测试卡后 `NEXT` 正常启用。
+
+### 当前线上地址
+
+- Production: `https://season-me.vercel.app/`
+- Latest deployment: `https://season-owvhwiwmp-elowenliu0305-6335s-projects.vercel.app`

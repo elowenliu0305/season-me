@@ -4,6 +4,11 @@
 
 'use strict';
 
+const API_ORIGIN = window.location.protocol === 'file:' ? 'https://season-me.vercel.app' : '';
+function apiUrl(path) {
+  return API_ORIGIN + path;
+}
+
 /* =========================================================
    Plausible event helper
    ========================================================= */
@@ -73,6 +78,11 @@ const PipelineClient = {
   onProgress(cb) { this._progressCallbacks.push(cb); },
   onDone(cb) { this._doneCallbacks.push(cb); },
   onError(cb) { this._errorCallbacks.push(cb); },
+  clearListeners() {
+    this._progressCallbacks = [];
+    this._doneCallbacks = [];
+    this._errorCallbacks = [];
+  },
 
   _emit(type, data) {
     (type === 'progress' ? this._progressCallbacks : type === 'done' ? this._doneCallbacks : this._errorCallbacks)
@@ -101,11 +111,14 @@ const PipelineClient = {
     };
 
     this._running = true;
-    fetch('/api/pipeline', {
+    fetch(apiUrl('/api/pipeline'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(response => {
+      if (!response.ok || !response.body) {
+        throw new Error('Pipeline request failed');
+      }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -122,7 +135,10 @@ const PipelineClient = {
           } else if (line.startsWith('data: ')) {
             const data = JSON.parse(line.slice(6));
             if (event === 'progress') PipelineClient._emit('progress', data);
-            else if (event === 'step_result') PipelineClient._stepResults = PipelineClient._stepResults || {};
+            else if (event === 'step_result') {
+              PipelineClient._stepResults = PipelineClient._stepResults || {};
+              PipelineClient._stepResults[data.step] = data.data;
+            }
             else if (event === 'step_error') {
               console.warn('Pipeline step error:', data);
             }
@@ -893,11 +909,11 @@ function showPhotoPreview(dataUrl) {
 }
 
 // 5.6 Crop center square + compress
-function processAndSavePhoto(dataUrl, quality = 0.7) {
+function processAndSavePhoto(dataUrl, quality = 0.82) {
   const img = new Image();
   img.onload = () => {
     const canvas = document.getElementById('photoCanvas');
-    const size = 640;
+    const size = 896;
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
     const s = Math.min(img.width, img.height);
@@ -906,8 +922,8 @@ function processAndSavePhoto(dataUrl, quality = 0.7) {
     ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
     const result = canvas.toDataURL('image/jpeg', quality);
     const kb = Math.round((result.length * 3/4) / 1024);
-    if (kb > 200 && quality > 0.3) {
-      processAndSavePhoto(dataUrl, quality - 0.15);
+    if (kb > 650 && quality > 0.45) {
+      processAndSavePhoto(dataUrl, quality - 0.12);
       return;
     }
     if (kb > 3072) {
@@ -931,6 +947,7 @@ function initDarkroomPage() {
   complete.classList.remove('visible');
 
   PipelineClient.reset();
+  PipelineClient.clearListeners();
 
   PipelineClient.onProgress(({ step, message }) => {
     if (step > 1) output.textContent += '\n';
@@ -984,12 +1001,12 @@ const SEASON_META = {
     copy: '你是春日午后最温柔的那束光。象牙白、蜜桃与苔绿相伴，赋予你一种天然的亲和力与生命力。',
   },
   'light-spring': {
-    zh: '柔春', en: 'LIGHT SPRING',
-    keywords: ['SOFT · WARM · DELICATE'],
+    zh: '浅春', en: 'LIGHT SPRING',
+    keywords: ['LIGHT · WARM · DELICATE'],
     copy: '你的美轻盈如初春薄雾，粉彩与米金是天生的伙伴。过于沉重的色彩会遮掩你与生俱来的清透感。',
   },
   'light-summer': {
-    zh: '柔夏', en: 'LIGHT SUMMER',
+    zh: '浅夏', en: 'LIGHT SUMMER',
     keywords: ['COOL · LIGHT · AIRY'],
     copy: '你的气质如冰蓝天空般开阔纯净。粉灰与薰衣草是你最好的朋友，让你散发宁静又不失存在感的魅力。',
   },
@@ -999,7 +1016,7 @@ const SEASON_META = {
     copy: '你天生自带一种精准的克制美学。莫兰迪色系与你高度契合，低调的冷调色彩让你显得格外有品位与深度。',
   },
   'soft-summer': {
-    zh: '优雅夏', en: 'SOFT SUMMER',
+    zh: '柔夏', en: 'SOFT SUMMER',
     keywords: ['SOFT · COOL · REFINED'],
     copy: '你的美是经过时间沉淀的成熟与温柔。玫瑰灰、蓝灰与粉紫为你构建出一种无可复制的优雅质感。',
   },
@@ -1034,6 +1051,11 @@ const SEASON_META = {
     copy: '你是冬日里最耀眼的那道光。高饱和的冷色——品蓝、品红与翠绿——天然属于你，让你在人群中无法被忽视。',
   },
 };
+
+function getSeasonLabel(seasonId) {
+  const meta = SEASON_META[seasonId];
+  return meta ? `${meta.zh} (${meta.en})` : seasonId;
+}
 
 /* =========================================================
    PAGE 6 · FEATURE STORY
@@ -1137,7 +1159,7 @@ function renderSeasonReasoning(r) {
   if (!r) return '';
   const confidenceHtml = r.confidence ? `<span class="ai-badge">置信度 ${r.confidence}</span>` : '';
   const candidateHtml = r.candidates && r.candidates.length
-    ? `<p class="ai-features">候选季相：${r.candidates.join(' → ')}</p>` : '';
+    ? `<p class="ai-features">候选季相：${r.candidates.map(getSeasonLabel).join(' → ')}</p>` : '';
   const reasoningHtml = r.reasoning ? `<p class="ai-report-text">${r.reasoning}</p>` : '';
   return confidenceHtml + candidateHtml + reasoningHtml;
 }
@@ -1283,6 +1305,7 @@ function initExportPage() {
 
 let shareImageBlob = null;
 let shareImageUrl  = null;
+let shareImageMimeType = 'image/png';
 
 // 9.2 Generate via html2canvas
 async function generateShareImage() {
@@ -1298,6 +1321,7 @@ async function generateShareImage() {
 
     canvas.toBlob(blob => {
       shareImageBlob = blob;
+      shareImageMimeType = 'image/png';
       shareImageUrl  = URL.createObjectURL(blob);
       // Verify 3:4 ratio
       if (Math.abs(canvas.width / canvas.height - 3/4) > 0.05) {
@@ -1472,23 +1496,19 @@ function initCommunityPage() {
 }
 
 async function loadCommunityPosts() {
-  const sb = getSupabase();
-  if (!sb) return;
+  try {
+    const resp = await fetch(apiUrl('/api/community-posts?limit=200'));
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok || !json.ok) throw new Error(json.error || 'Failed to load community posts');
 
-  const { data, error } = await sb
-    .from('community_posts')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(200);
-
-  if (error) {
-    console.error('Failed to load community posts:', error);
-    return;
+    communityPosts = json.data || [];
+    document.getElementById('communityPostCount').textContent = communityPosts.length + ' posts';
+    renderMapMarkers();
+  } catch (error) {
+    console.error('Failed to load community posts:', error.message || error);
+    document.getElementById('communityPostCount').textContent = 'load failed';
+    showToast('Community posts failed to load');
   }
-
-  communityPosts = data || [];
-  document.getElementById('communityPostCount').textContent = communityPosts.length + ' posts';
-  renderMapMarkers();
 }
 
 function renderMapMarkers() {
@@ -1496,6 +1516,10 @@ function renderMapMarkers() {
   communityMarkers.clearLayers();
 
   communityPosts.forEach(post => {
+    const lat = Number(post.latitude);
+    const lng = Number(post.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
     const fallbackHtml = getSpiritEmojiHtml(post.spirit);
     const icon = L.divIcon({
       className: 'community-marker-wrapper',
@@ -1504,7 +1528,7 @@ function renderMapMarkers() {
       iconAnchor: [22, 29],
     });
 
-    const marker = L.marker([post.latitude, post.longitude], { icon })
+    const marker = L.marker([lat, lng], { icon })
       .addTo(communityMarkers);
 
     marker.on('click', (e) => {
@@ -1584,28 +1608,32 @@ function isPostDislikedByUser(postId) {
 }
 
 async function toggleLike(postId) {
-  const sb = getSupabase();
-  if (!sb) return;
-
   const sessionId = getSessionId();
   const alreadyLiked = isPostLikedByUser(postId);
   const alreadyDisliked = isPostDislikedByUser(postId);
 
   try {
+    const resp = await fetch(apiUrl('/api/community-reactions'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postId,
+        sessionId,
+        reaction: 'like',
+        active: !alreadyLiked,
+      }),
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok || !json.ok) throw new Error(json.error || 'Toggle like failed');
+
     if (alreadyLiked) {
-      await sb.from('community_likes').delete().match({ post_id: postId, session_id: sessionId });
-      await sb.rpc('decrement_likes', { post_id_input: postId });
       smse.setJSON('communityLikes', (smse.getJSON('communityLikes') || []).filter(id => id !== postId));
     } else {
       if (alreadyDisliked) {
-        await sb.from('community_dislikes').delete().match({ post_id: postId, session_id: sessionId });
-        await sb.rpc('decrement_dislikes', { post_id_input: postId });
         smse.setJSON('communityDislikes', (smse.getJSON('communityDislikes') || []).filter(id => id !== postId));
       }
-      await sb.from('community_likes').insert({ post_id: postId, session_id: sessionId });
-      await sb.rpc('increment_likes', { post_id_input: postId });
       const liked = smse.getJSON('communityLikes') || [];
-      liked.push(postId);
+      if (!liked.includes(postId)) liked.push(postId);
       smse.setJSON('communityLikes', liked);
     }
 
@@ -1616,28 +1644,32 @@ async function toggleLike(postId) {
 }
 
 async function toggleDislike(postId) {
-  const sb = getSupabase();
-  if (!sb) return;
-
   const sessionId = getSessionId();
   const alreadyDisliked = isPostDislikedByUser(postId);
   const alreadyLiked = isPostLikedByUser(postId);
 
   try {
+    const resp = await fetch(apiUrl('/api/community-reactions'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postId,
+        sessionId,
+        reaction: 'dislike',
+        active: !alreadyDisliked,
+      }),
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok || !json.ok) throw new Error(json.error || 'Toggle dislike failed');
+
     if (alreadyDisliked) {
-      await sb.from('community_dislikes').delete().match({ post_id: postId, session_id: sessionId });
-      await sb.rpc('decrement_dislikes', { post_id_input: postId });
       smse.setJSON('communityDislikes', (smse.getJSON('communityDislikes') || []).filter(id => id !== postId));
     } else {
       if (alreadyLiked) {
-        await sb.from('community_likes').delete().match({ post_id: postId, session_id: sessionId });
-        await sb.rpc('decrement_likes', { post_id_input: postId });
         smse.setJSON('communityLikes', (smse.getJSON('communityLikes') || []).filter(id => id !== postId));
       }
-      await sb.from('community_dislikes').insert({ post_id: postId, session_id: sessionId });
-      await sb.rpc('increment_dislikes', { post_id_input: postId });
       const disliked = smse.getJSON('communityDislikes') || [];
-      disliked.push(postId);
+      if (!disliked.includes(postId)) disliked.push(postId);
       smse.setJSON('communityDislikes', disliked);
     }
 
@@ -1723,20 +1755,48 @@ function ensureShareCardPopulated() {
   buildPaletteCollage('scPalette', theme, true);
   document.getElementById('share-card').style.background = theme['--accent-color'];
 
-  // Make the share-card visible temporarily for html2canvas
+  // Make the hidden export page measurable for html2canvas.
+  const exportPage = document.getElementById('page-export');
   const container = document.getElementById('share-card').parentElement;
+  exportPage.dataset.captureDisplay = exportPage.style.display || '';
+  exportPage.dataset.capturePosition = exportPage.style.position || '';
+  exportPage.dataset.captureLeft = exportPage.style.left || '';
+  exportPage.dataset.captureTop = exportPage.style.top || '';
+  exportPage.dataset.capturePointerEvents = exportPage.style.pointerEvents || '';
+  container.dataset.captureVisibility = container.style.visibility || '';
+  container.dataset.capturePosition = container.style.position || '';
+  container.dataset.captureLeft = container.style.left || '';
+  container.dataset.captureTop = container.style.top || '';
+
+  exportPage.style.display = 'block';
+  exportPage.style.position = 'fixed';
+  exportPage.style.left = '-9999px';
+  exportPage.style.top = '0';
+  exportPage.style.pointerEvents = 'none';
   container.style.visibility = 'visible';
-  container.style.position = 'fixed';
-  container.style.left = '-9999px';
-  container.style.top = '0';
 }
 
 function restoreShareCardContainer() {
+  const exportPage = document.getElementById('page-export');
   const container = document.getElementById('share-card').parentElement;
-  container.style.visibility = '';
-  container.style.position = '';
-  container.style.left = '';
-  container.style.top = '';
+  exportPage.style.display = exportPage.dataset.captureDisplay || '';
+  exportPage.style.position = exportPage.dataset.capturePosition || '';
+  exportPage.style.left = exportPage.dataset.captureLeft || '';
+  exportPage.style.top = exportPage.dataset.captureTop || '';
+  exportPage.style.pointerEvents = exportPage.dataset.capturePointerEvents || '';
+  container.style.visibility = container.dataset.captureVisibility || '';
+  container.style.position = container.dataset.capturePosition || '';
+  container.style.left = container.dataset.captureLeft || '';
+  container.style.top = container.dataset.captureTop || '';
+  delete exportPage.dataset.captureDisplay;
+  delete exportPage.dataset.capturePosition;
+  delete exportPage.dataset.captureLeft;
+  delete exportPage.dataset.captureTop;
+  delete exportPage.dataset.capturePointerEvents;
+  delete container.dataset.captureVisibility;
+  delete container.dataset.capturePosition;
+  delete container.dataset.captureLeft;
+  delete container.dataset.captureTop;
 }
 
 async function generateShareImageForCommunity() {
@@ -1751,19 +1811,21 @@ async function generateShareImageForCommunity() {
       logging: false,
     });
 
-    return new Promise((resolve) => {
-      canvas.toBlob(blob => {
-        if (shareImageUrl) URL.revokeObjectURL(shareImageUrl);
-        shareImageBlob = blob;
-        shareImageUrl = URL.createObjectURL(blob);
-        restoreShareCardContainer();
-        resolve(blob);
-      }, 'image/png');
-    });
+    const toBlob = (type, quality) => new Promise(resolve => canvas.toBlob(resolve, type, quality));
+    let blob = await toBlob('image/jpeg', 0.88);
+    if (blob && blob.size > 1800 * 1024) blob = await toBlob('image/jpeg', 0.72);
+    if (!blob || blob.size > 2 * 1024 * 1024) throw new Error('Share card image is too large');
+
+    if (shareImageUrl) URL.revokeObjectURL(shareImageUrl);
+    shareImageBlob = blob;
+    shareImageMimeType = 'image/jpeg';
+    shareImageUrl = URL.createObjectURL(blob);
+    return blob;
   } catch (err) {
     console.error('html2canvas community error', err);
-    restoreShareCardContainer();
     return null;
+  } finally {
+    restoreShareCardContainer();
   }
 }
 
@@ -1839,25 +1901,28 @@ async function submitPost() {
     });
     const base64Data = await base64Promise;
 
-    const uploadResp = await fetch('/api/upload-card', {
+    const mimeType = shareImageBlob.type || shareImageMimeType || 'image/jpeg';
+    const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+    const uploadResp = await fetch(apiUrl('/api/upload-card'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         data: base64Data,
-        mimeType: 'image/png',
-        fileName: getSessionId() + '_' + Date.now() + '.png',
+        mimeType,
+        fileName: getSessionId() + '_' + Date.now() + '.' + extension,
       }),
     });
-    if (!uploadResp.ok) throw new Error('Image upload failed');
-    const { url: cardImageUrl } = await uploadResp.json();
+    const uploadJson = await uploadResp.json().catch(() => ({}));
+    if (!uploadResp.ok) throw new Error(uploadJson.error || 'Image upload failed');
+    const { url: cardImageUrl } = uploadJson;
 
     // Step 2: Create post in Supabase
-    const sb = getSupabase();
     const locationLabel = document.getElementById('communityLocationLabel').textContent;
 
-    const { data, error } = await sb
-      .from('community_posts')
-      .insert({
+    const postResp = await fetch(apiUrl('/api/community-posts'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         session_id: getSessionId(),
         nickname: smse.get('nickname') || 'ANONYMOUS',
         spirit: smse.get('spirit') || 'swan',
@@ -1868,10 +1933,10 @@ async function submitPost() {
         longitude: userLocation.lng,
         location_label: locationLabel,
       })
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
+    });
+    const postJson = await postResp.json().catch(() => ({}));
+    if (!postResp.ok || !postJson.ok) throw new Error(postJson.error || 'Post creation failed');
+    const data = postJson.data;
 
     showToast('Shared to community!');
     closePostModal();
@@ -1962,7 +2027,7 @@ const COLOUR_GUIDE_SEASONS = [
   {
     id: 'light-spring',
     nameEn: 'Light Spring',
-    nameZh: '明亮春季',
+    nameZh: '浅春季',
     palette: ['#F9E4B7', '#F5C6A0', '#F0A88A', '#E88A72', '#D4C5A9'],
     accentColor: '#F0A88A',
     figures: ['奥黛丽·赫本', '泰勒·斯威夫特', '布兰妮·斯皮尔斯'],
@@ -1980,9 +2045,9 @@ const COLOUR_GUIDE_SEASONS = [
     style: '暖橙、珊瑚、番茄红是天生好色。大地色系穿搭最具整体感，搭配棕色皮革配件。避免冷灰和冰蓝。推荐有质感的棉质或轻磅针织，金属感首饰偏暖金色调。'
   },
   {
-    id: 'clear-spring',
-    nameEn: 'Clear Spring',
-    nameZh: '清澈春季',
+    id: 'bright-spring',
+    nameEn: 'Bright Spring',
+    nameZh: '明亮春季',
     palette: ['#FFE8D6', '#FFB347', '#FF6B6B', '#C23B22', '#1B998B'],
     accentColor: '#FF6B6B',
     figures: ['斯嘉丽·约翰逊', '安吉丽娜·朱莉', '张曼玉'],
@@ -1992,7 +2057,7 @@ const COLOUR_GUIDE_SEASONS = [
   {
     id: 'light-summer',
     nameEn: 'Light Summer',
-    nameZh: '明亮夏季',
+    nameZh: '浅夏季',
     palette: ['#E8EAF6', '#C5CAE9', '#9FA8DA', '#7986CB', '#B0BEC5'],
     accentColor: '#9FA8DA',
     figures: ['格蕾丝·凯利', '妮可·基德曼', '凯特·布兰切特'],
@@ -2012,7 +2077,7 @@ const COLOUR_GUIDE_SEASONS = [
   {
     id: 'soft-summer',
     nameEn: 'Soft Summer',
-    nameZh: '柔和夏季',
+    nameZh: '柔夏季',
     palette: ['#D4C5C7', '#C2A8A8', '#A67C7C', '#8B5A5A', '#6B3F3F'],
     accentColor: '#C2A8A8',
     figures: ['莫妮卡·贝鲁奇', '艾拉·菲茨杰拉德', '苏菲·玛索'],
@@ -2050,9 +2115,9 @@ const COLOUR_GUIDE_SEASONS = [
     style: '深栗、酒红、暗绿、深棕是专属色系，整体着装偏向深色调，单色搭配更显气场。避免浅粉和粉蜡笔色。推荐厚重面料和立体剪裁，金色或深铜色饰品强化整体高级感。'
   },
   {
-    id: 'clear-winter',
-    nameEn: 'Clear Winter',
-    nameZh: '清澈冬季',
+    id: 'bright-winter',
+    nameEn: 'Bright Winter',
+    nameZh: '明亮冬季',
     palette: ['#FFFFFF', '#1A1A2E', '#16213E', '#0F3460', '#E94560'],
     accentColor: '#E94560',
     figures: ['奥黛丽·塔图', '宋慧乔', '章子怡'],

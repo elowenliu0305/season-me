@@ -1,5 +1,5 @@
 const SHELL = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json'];
-const CACHE_NAME = 'season-me-v2';
+const CACHE_NAME = 'season-me-v7';
 const IMAGE_CACHE = 'season-me-images-v1';
 const IMAGE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 
